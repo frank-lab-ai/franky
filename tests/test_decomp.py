@@ -2,7 +2,7 @@ import unittest
 from frank.map.temporal import Temporal
 from frank.map.geospatial import Geospatial
 from frank.map.normalize import Normalize
-from frank.map.isa import IsA
+# from frank.map.isa import IsA
 from frank.alist import Alist
 from frank.alist import Attributes as tt
 
