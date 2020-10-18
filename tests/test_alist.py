@@ -12,14 +12,14 @@ class Test_Alist(unittest.TestCase):
     def test_a(self):
         self.assertTrue(True)
 
-    def test_link_child(self):
-        parent = Alist(**{tt.ID: '1', tt.SUBJECT: 'Africa', tt.PROPERTY: 'P1082',
-                          tt.OBJECT: '', tt.TIME: '2010', tt.OPVAR: '?x', tt.COST: 1})
-        child = Alist(**{tt.ID: '1', tt.SUBJECT: 'Ghana', tt.PROPERTY: 'P1082',
-                         tt.OBJECT: '', tt.TIME: '2010', tt.OPVAR: '?x', tt.COST: 1})
-        parent.link_child(child)
-        self.assertTrue(len(parent.children) > 0 and len(
-            child.parent) > 0, 'parent and child count should be > 0 after linking')
+    # def test_link_child(self):
+    #     parent = Alist(**{tt.ID: '1', tt.SUBJECT: 'Africa', tt.PROPERTY: 'P1082',
+    #                       tt.OBJECT: '', tt.TIME: '2010', tt.OPVAR: '?x', tt.COST: 1})
+    #     child = Alist(**{tt.ID: '1', tt.SUBJECT: 'Ghana', tt.PROPERTY: 'P1082',
+    #                      tt.OBJECT: '', tt.TIME: '2010', tt.OPVAR: '?x', tt.COST: 1})
+    #     parent.link_child(child)
+    #     self.assertTrue(len(parent.children) > 0 and len(
+    #         child.parent) > 0, 'parent and child count should be > 0 after linking')
 
     def test_getVariables(self):
         alist = Alist(**{tt.ID: '1', tt.SUBJECT: 'Africa', tt.PROPERTY: 'P1082',
@@ -114,44 +114,6 @@ class Test_Alist(unittest.TestCase):
                          tt.OBJECT: '?x', tt.TIME: '2010', tt.OPVAR: '?x', tt.COST: 1, '$y': 'Ghana'})
         result = alist.get_alist_json_with_metadata()
         self.assertTrue('id' in result)
-    
-    def test_graph_add_node(self):
-        graph = InferenceGraph()
-        alist1 = AlistB(**{tt.ID: '1', tt.SUBJECT: '$y', tt.PROPERTY: 'P1082',
-                         tt.OBJECT: '?x', tt.TIME: '2010', tt.OPVAR: '?x', tt.COST: 1, '$y': 'Ghana'})
-        alist2 = AlistB(**{tt.ID: '101', tt.SUBJECT: 'Africa', tt.PROPERTY: 'P1082',
-                         tt.OBJECT: '?x', tt.TIME: '2010', tt.OPVAR: '?x', tt.COST: 1})
-        graph.add_alist(alist1)
-        graph.add_alist(alist2)
-        nodes = graph.nodes()
-        print(nodes)
-        self.assertTrue(len(nodes) == 2)
-
-    def test_graph_add_nodes(self):
-        graph = InferenceGraph()
-        alist1 = AlistB(**{tt.ID: '1', tt.SUBJECT: '$y', tt.PROPERTY: 'P1082',
-                         tt.OBJECT: '?x', tt.TIME: '2010', tt.OPVAR: '?x', tt.COST: 1, '$y': 'Ghana'})
-        alist2 = AlistB(**{tt.ID: '101', tt.SUBJECT: 'Africa', tt.PROPERTY: 'P1082',
-                         tt.OBJECT: '?x', tt.TIME: '2010', tt.OPVAR: '?x', tt.COST: 1})
-        graph.add_alists_from([alist1, alist2])
-        nodes = graph.nodes()
-        print(nodes)
-        self.assertTrue(len(nodes) == 2)
-    
-    def test_graph_add_nodes_and_edges(self):
-        graph = InferenceGraph()
-        alist1 = AlistB(**{tt.ID: '1', tt.SUBJECT: '$y', tt.PROPERTY: 'P1082',
-                         tt.OBJECT: '?x', tt.TIME: '2010', tt.OPVAR: '?x', tt.COST: 1, '$y': 'Ghana'})
-        alist2 = AlistB(**{tt.ID: '101', tt.SUBJECT: 'Africa', tt.PROPERTY: 'P1082',
-                         tt.OBJECT: '?x', tt.TIME: '2010', tt.OPVAR: '?x', tt.COST: 1})
-        graph.add_alists_from([alist1, alist2])  
-        graph.display()      
-        graph.add_edge(alist1.id, alist2.id)
-        edges = graph.edges()
-        graph.display()
-        print(edges)
-        self.assertTrue(len(edges) == 1)
-
 
 
 if __name__ == '__main__':
