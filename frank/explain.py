@@ -2,7 +2,7 @@
 File: explain.py
 Description: Generate explanations for alists and operations.
 Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
-Copyright 2014 - 2020  Kobby K.A. Nuamah
+
 '''
 
 from frank.alist import Alist
@@ -12,6 +12,7 @@ from frank.alist import Branching as branching
 from frank.alist import NodeTypes as nt
 from frank import config
 import frank.cache.neo4j
+from frank.graph import InferenceGraph
 
 
 class Explanation():

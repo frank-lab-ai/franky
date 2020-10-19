@@ -2,7 +2,7 @@
 File: product.py
 Description: Multiplication reduce operation
 Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
-Copyright 2014 - 2020  Kobby K.A. Nuamah
+
 '''
 from functools import reduce as ft_reduce
 import operator

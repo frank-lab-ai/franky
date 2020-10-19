@@ -1,5 +1,4 @@
 from frank.alist import Alist
-from frank.alist import Alist
 from frank.graph import InferenceGraph
 from frank.alist import Attributes as tt
 from frank.alist import VarPrefix as vx
@@ -91,9 +90,15 @@ class Test_Graph(unittest.TestCase):
 
     def test_get_parent(self):
         graph = self.create_graph()
-        parent_alist = graph.parent('111')
+        parent_alist = graph.parent_alists('111')
         print(parent_alist)
-        self.assertTrue(parent_alist.id == '1')
+        self.assertTrue(parent_alist[0].id == '1')
+
+    def test_get_children(self):
+        graph = self.create_graph()
+        child_alists = graph.child_alists('1')
+        print(child_alists)
+        self.assertTrue(len(child_alists) == 2)
 
     def test_get_alist(self):
         graph = self.create_graph()
@@ -119,7 +124,7 @@ class Test_Graph(unittest.TestCase):
         graph.display()        
         plt.pause(2)
     
-        self.assertTrue(true)
+        self.assertTrue(graph.number_of_nodes() == 2)
     
 
 

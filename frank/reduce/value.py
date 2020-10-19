@@ -3,7 +3,7 @@ File: value.py
 Description: Value reduce operation that reduces multiple values to a single 
              one in the absence of a specified aggregation operation.
 Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
-Copyright 2014 - 2020  Kobby K.A. Nuamah
+
 '''
 
 from typing import List

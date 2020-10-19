@@ -2,7 +2,7 @@
 File: frank_api.py
 Description: REST-based API for FRANK
 Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
-Copyright 2014 - 2020  Kobby K.A. Nuamah
+
 '''
 
 from flask import Flask, request, Response

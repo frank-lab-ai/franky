@@ -2,7 +2,7 @@
 File: wikidata.py
 Description: Interface to Wikidata
 Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
-Copyright 2014 - 2020  Kobby K.A. Nuamah
+
 '''
 
 from pymongo import MongoClient

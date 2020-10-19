@@ -1,4 +1,4 @@
-from frank.alist import Alist
+# from frank.alist import Alist
 from frank.alist_basic import AlistB
 from frank.graph import InferenceGraph
 from frank.alist import Attributes as tt

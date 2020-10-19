@@ -2,7 +2,7 @@
 File: gpregress.py
 Description: Basic Gaussian Process Regression reduce operation (with exponential kernel)
 Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
-Copyright 2014 - 2020  Kobby K.A. Nuamah
+
 '''
 import datetime
 import time

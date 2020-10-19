@@ -11,15 +11,16 @@ from frank.alist import Attributes as tt
 from frank.alist import VarPrefix as vx
 from frank.alist import Branching as br
 from frank.alist import States as states
+from frank.alist import NodeTypes as nt
 from frank.kb import rdf
 from .map import Map
-
+from frank.graph import InferenceGraph
 
 class Normalize(Map):
     def __init__(self):
         pass
 
-    def decompose(self, alist: A):
+    def decompose(self, alist: A, G: InferenceGraph):
         nest_vars = alist.uninstantiated_nesting_variables()
         for nest_attr, v in nest_vars.items():
             if NormalizeFn.FILTER in v:
@@ -31,8 +32,9 @@ class Normalize(Map):
                 op_alist.branch_type = br.AND
                 op_alist.state = states.EXPLORED
                 op_alist.parent_decomposition = 'normalize'
-                alist.link_child(op_alist)
-
+                op_alist.node_type = nt.HNODE
+                # alist.link_child(op_alist)
+                G.link(alist, op_alist, op_alist.parent_decomposition)
                 # check for filters that heuristics apply to
                 # e.g type==country and location==Europs
                 filter_patterns = {}
@@ -57,7 +59,10 @@ class Normalize(Map):
                     child.set(tt.OBJECT, filter_patterns['location'])
                     child.cost = op_alist.cost + 1
                     child.state = states.UNEXPLORED
-                    op_alist.link_child(child)
+                    child.node_type = nt.ZNODE
+                    child.set(tt.CONTEXT, op_alist.get(tt.CONTEXT))
+                    # op_alist.link_child(child)
+                    G.link(op_alist, child, op_alist.parent_decomposition)
                     return op_alist
                 else:
                     for x in v[NormalizeFn.FILTER]:
@@ -69,7 +74,10 @@ class Normalize(Map):
                             child.set(attr, attrval)
                         child.cost = op_alist.cost + 1
                         child.state = states.UNEXPLORED
-                        op_alist.link_child(child)
+                        child.node_type = nt.ZNODE
+                        child.set(tt.CONTEXT, op_alist.get(tt.CONTEXT))
+                        # op_alist.link_child(child)
+                        G.link(op_alist, child, op_alist.parent_decomposition)
                     return op_alist
 
             elif NormalizeFn.IN in v:
@@ -80,7 +88,9 @@ class Normalize(Map):
                 op_alist.cost = alist.cost + 1
                 op_alist.state = states.EXPLORED
                 op_alist.parent_decomposition = 'normalize'
-                alist.link_child(op_alist)
+                op_alist.node_type = nt.HNODE
+                # alist.link_child(op_alist)
+                G.link(alist, op_alist, op_alist.parent_decomposition)
 
                 listed_items = []
                 if isinstance(v[NormalizeFn.IN], list):
@@ -102,8 +112,11 @@ class Normalize(Map):
                         child.set(nest_attr, new_var)
                         child.set(new_var, x)
                     child.state = states.UNEXPLORED
+                    child.node_type = nt.ZNODE
                     child.cost = op_alist.cost + 1
-                    op_alist.link_child(child)
+                    child.set(tt.CONTEXT, op_alist.get(tt.CONTEXT))
+                    # op_alist.link_child(child)
+                    G.link(op_alist, child, op_alist.parent_decomposition)
                 return op_alist
 
             elif NormalizeFn.IS in v:
@@ -114,7 +127,9 @@ class Normalize(Map):
                 op_alist.cost = alist.cost + 1
                 op_alist.state = states.EXPLORED
                 op_alist.parent_decomposition = 'normalize'
-                alist.link_child(op_alist)
+                op_alist.node_type = nt.HNODE
+                # alist.link_child(op_alist)
+                G.link(alist, op_alist, op_alist.parent_decomposition)
 
                 child = A(**{})
                 child.set(tt.OP, 'value')
@@ -123,7 +138,10 @@ class Normalize(Map):
                 child.set(new_var, v[NormalizeFn.IS])
                 child.state = states.REDUCIBLE
                 child.cost = op_alist.cost + 1
-                op_alist.link_child(child)
+                child.node_type = nt.ZNODE
+                child.set(tt.CONTEXT, op_alist.get(tt.CONTEXT))
+                # op_alist.link_child(child)
+                G.link(op_alist, child, op_alist.parent_decomposition)
 
                 if v[NormalizeFn.IS].startswith((vx.AUXILLIARY, vx.NESTING, vx.PROJECTION)) == False:
                     # this is an instantiation, so a pseudo leaf node should be created
@@ -135,7 +153,10 @@ class Normalize(Map):
                     leaf.set(new_var, v[NormalizeFn.IS])
                     leaf.state = states.REDUCIBLE
                     leaf.cost = op_alist.cost + 1
-                    child.link_child(leaf)
+                    leaf.node_type = nt.ZNODE
+                    leaf.set(tt.CONTEXT, op_alist.get(tt.CONTEXT))
+                    # child.link_child(leaf)
+                    G.link(child, leaf, op_alist.parent_decomposition)
 
                 return op_alist
 
@@ -147,7 +168,9 @@ class Normalize(Map):
                 op_alist.set(nest_attr, '')
                 op_alist.cost = alist.cost + 1
                 op_alist.parent_decomposition = 'normalize'
-                alist.link_child(op_alist)
+                op_alist.node_type = nt.HNODE
+                # alist.link_child(op_alist)
+                G.link(alist, op_alist, op_alist.parent_decomposition)
 
                 var_ctr = 200
                 child = A(**{})
@@ -162,7 +185,10 @@ class Normalize(Map):
                         child.set(new_var, av)
                         var_ctr = var_ctr + 1
                 child.cost = op_alist.cost + 1
-                op_alist.link_child(child)
+                child.node_type = nt.ZNODE
+                child.set(tt.CONTEXT, op_alist.get(tt.CONTEXT))
+                # op_alist.link_child(child)
+                G.link(op_alist, child, op_alist.parent_decomposition)
                 return op_alist
         return None
 

@@ -2,7 +2,7 @@
 File: wikidata.py
 Description: Interface to Wikidata
 Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
-Copyright 2014 - 2020  Kobby K.A. Nuamah
+
 '''
 
 import requests
@@ -108,7 +108,7 @@ def find_property_subject(alist: Alist):
             data_alist.set(tt.SUBJECT, d['sLabel']['value'])
             if 'year' in d:
                 data_alist.set(tt.TIME, d['year']['value'])
-            data_alist.data_sources.add('wikidata')
+            data_alist.data_sources= list(set(data_alist.data_sources + ['wikidata']))
             alist_arr.append(data_alist)
     except Exception as e:
         print("wikidata query response error: " + str(e))
@@ -161,7 +161,7 @@ def find_property_object(alist: Alist):
                     data_alist = alist.copy()
                     data_alist.set(tt.OBJECT, d['oLabel']['value'])                    
                     data_alist.set(tt.TIME, d['year']['value'])
-                    data_alist.data_sources.add('wikidata')
+                    data_alist.data_sources= list(set(data_alist.data_sources + ['wikidata']))
                     alist_arr.append(data_alist)
 
             # else if time is injected from context
@@ -179,14 +179,14 @@ def find_property_object(alist: Alist):
                         data_alist.set(tt.OBJECT, d['oLabel']['value'])                    
                         # if 'year' in d: # use time in dataset optionally
                         #     data_alist.set(tt.TIME, d['year']['value'])                    
-                        data_alist.data_sources.add('wikidata')
+                        data_alist.data_sources= list(set(data_alist.data_sources + ['wikidata']))
                         alist_arr.append(data_alist)
             else:
                 data_alist = alist.copy()
                 data_alist.set(tt.OBJECT, d['oLabel']['value'])
                 # if 'year' in d: # use time in dataset optionally
                 #     data_alist.set(tt.TIME, d['year']['value'])
-                data_alist.data_sources.add('wikidata')
+                data_alist.data_sources= list(set(data_alist.data_sources + ['wikidata']))
                 alist_arr.append(data_alist)
 
     except Exception as ex:
@@ -368,10 +368,10 @@ def _part_of_relation_subject(entity_name: str, relationName: str):
 def part_of_relation_subject(alist: Alist):
     results = []
     for r in _part_of_relation_subject(alist.get(tt.OBJECT), "location"):
-        factAlist = alist.copy()
-        factAlist.data_sources.add('wikidata')
-        factAlist.set(tt.SUBJECT, r)
-        results.append(factAlist)
+        fact_alist = alist.copy()
+        fact_alist.data_sources= list(set(fact_alist.data_sources + ['wikidata']))
+        fact_alist.set(tt.SUBJECT, r)
+        results.append(fact_alist)
     return results
 
 
@@ -400,10 +400,10 @@ def _part_of_relation_object(entity_name: str, relationName: str):
 def part_of_relation_object(alist: Alist):
     results = []
     for r in _part_of_relation_object(alist.get(tt.SUBJECT), "location"):
-        factAlist = alist.copy()
-        factAlist.data_sources.add('wikidata')
-        factAlist.set(tt.OBJECT, r)
-        results.append(factAlist)
+        fact_alist = alist.copy()
+        fact_alist.data_sources= list(set(fact_alist.data_sources + ['wikidata']))
+        fact_alist.set(tt.OBJECT, r)
+        results.append(fact_alist)
     return results
 
 
@@ -412,7 +412,7 @@ def part_of_geopolitical_subject(alist: Alist):
     geopolitical_type = alist.get(tt.PROPERTY).split(':')
     for r in find_geopolitical_subelements(alist.get(tt.OBJECT), geopolitical_type[-1]):
         fact_alist = alist.copy()
-        fact_alist.data_sources.add('wikidata')
+        fact_alist.data_sources= list(set(data_alist.data_sources + ['wikidata']))
         fact_alist.set(tt.SUBJECT, r)
         results.append(fact_alist)
     return results

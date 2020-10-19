@@ -2,7 +2,7 @@
 File: inference.py
 Description: Core functions to the FRANK algorithm
 Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
-Copyright 2014 - 2020  Kobby K.A. Nuamah
+
 '''
 
 import datetime
@@ -44,11 +44,13 @@ from .explain import Explanation
 from frank import processLog
 from frank.uncertainty.sourcePrior import SourcePrior as sourcePrior
 import frank.context
+from frank.graph import InferenceGraph
 
 
 class Execute:
 
-    def __init__(self):
+    def __init__(self, G:InferenceGraph):
+        self.G = G
         self.trace = ''
         self.session_id = '0'
         self.last_heartbeat = time.time()
@@ -67,6 +69,7 @@ class Execute:
     def enqueue_root(self, alist):
         self.root = alist
         self.enqueue_node(alist, None, True, '')
+        self.G.add_alist(alist)
 
     def enqueue_node(self, alist: Alist, parent: Alist, to_be_processed: bool, decomp_rule: str):
         try:
@@ -76,16 +79,16 @@ class Execute:
             self.graph_nodes.append(alist)
             if parent is not None:
                 self.graph_edges.append((parent.id, alist.id))
-            # update the trace store
-            # try:
-            clogger.Logging().log(
-                (clogger.REDIS, 'lpush', True, self.session_id + ':graphNodes', str(alist)))
-            if parent:
-                clogger.Logging().log(('redis', 'lpush', True,
-                                       self.session_id +
-                                       ':graphEdges', str(alist),
-                                       '{{"source":"{}", "target":"{}" }}'.format(parent.id, alist.id)))
-            self.write_graph(alist, parent=parent, edge=decomp_rule)
+            # # update the trace store
+            # clogger.Logging().log(
+            #     (clogger.REDIS, 'lpush', True, self.session_id + ':graphNodes', str(alist)))
+            # if parent:
+            #     clogger.Logging().log(('redis', 'lpush', True,
+            #                            self.session_id +
+            #                            ':graphEdges', str(alist),
+            #                            '{{"source":"{}", "target":"{}" }}'.format(parent.id, alist.id)))
+            # self.write_graph(alist, parent=parent, edge=decomp_rule)
+            # self.G.link(parent, alist, decomp_rule)
         except Exception:
             print("Exception occurred when adding node to queue")
 
@@ -101,10 +104,6 @@ class Execute:
         if alist.state is states.PRUNED:
             self.write_trace("ignore pruned:>> {}-{}".format(alist.id, alist))
             return propagated_to_root
-
-        # self.writeToGraph(alist)
-        # log the current thread id
-        # pass
 
         bool_result = False
         # check if OPVAR is instantiated
@@ -142,11 +141,11 @@ class Execute:
                 alist.state = states.EXPLORED
             if agg_instantiated and proj_instantiated:
                 alist.state = states.REDUCIBLE
-            if alist.children:
-                propagated_to_root = self.propagate(alist.children[0])
+            if self.G.child_ids(alist.id):
+                propagated_to_root = self.propagate(self.G.child_ids(alist.id)[0])
             else:
                 propagated_to_root = self.propagate(
-                    alist.parent[0].children[0])
+                    self.G.child_ids(self.G.parent_ids(alist.id)[0])[0])
 
             if propagated_to_root:
                 self.write_trace("intermediate ans:>> {}-{}".format(
@@ -285,7 +284,8 @@ class Execute:
                 if ff.get(tt.PROPERTY) in self.reverse_property_refs:
                     ff.set(tt.PROPERTY,
                            self.reverse_property_refs[ff.get(tt.PROPERTY)])
-                alist.link_child(ff)
+                # alist.link_child(ff)
+                self.G.link(alist, ff,alist.parent_decomposition)
                 alist.parent_decomposition = "Lookup"
                 self.enqueue_node(ff, alist, False, 'Lookup')
                 # self.add_reduced_alist_to_redis(ff) # leaf node from retrieved
@@ -323,7 +323,7 @@ class Execute:
         self.write_trace('T{thread} > {op}:{id}-{alist}'.format(
             thread=threading.get_ident(), op=mapOp[1], alist=alist, id=alist.id))
         alist.branchType = br.OR
-        child = mapOp[0](alist)
+        child = mapOp[0](alist, self.G)
         # check for query context
         context = alist.get(tt.CONTEXT)
         # if child and context:            
@@ -332,46 +332,73 @@ class Execute:
         #     frank.context.inject_query_context(child)
         self.last_heartbeat = time.time()
         if child is not None:
-            child.node_type = nt.HNODE
+            # child.node_type = nt.HNODE
             self.write_trace('>> {}-{}'.format(child.id, str(child)))
-            self.write_graph(child, parent=alist, edge=mapOp[1])
-            if child.state != states.EXPLORED:
-                child.parent_decomposition = mapOp[1]
-                heappush(self.wait_queue, (child.cost,
-                                           child, alist, False, mapOp[1]))
+            # self.write_graph(child, parent=alist, edge=mapOp[1])
+        #     if child.state != states.EXPLORED:
+        #         child.parent_decomposition = mapOp[1]
+        #         heappush(self.wait_queue, (child.cost,
+        #                                    child, alist, False, mapOp[1]))
 
-            for grandchild in child.children:
-                grandchild.node_type = nt.ZNODE
-                grandchild.set(tt.CONTEXT, child.get(tt.CONTEXT))
-                self.write_graph(grandchild, parent=child, edge=mapOp[1])
+        #     for grandchild in child.children:
+        #         # grandchild.node_type = nt.ZNODE
+        #         grandchild.set(tt.CONTEXT, child.get(tt.CONTEXT))
+        #         self.write_graph(grandchild, parent=child, edge=mapOp[1])
+        #         self.write_trace(
+        #             '>>> {}-{}'.format(grandchild.id, str(grandchild)))
+        #         if grandchild.state != states.EXPLORED:
+        #             heappush(self.wait_queue, (grandchild.cost,
+        #                                        grandchild, child, True, mapOp[1]))
+        #         reducibleCtr = 0
+        #         for ggc in grandchild.children:
+        #             ggc.node_type = nt.ZNODE
+        #             ggc.set(tt.CONTEXT, child.get(tt.CONTEXT))
+        #             self.write_graph(ggc, parent=grandchild, edge=mapOp[1])
+        #             self.write_trace('>>>> {}-{}'.format(ggc.id, str(ggc)))
+        #             if ggc.state == states.REDUCIBLE:
+        #                 if reducibleCtr == 0:
+        #                     heappush(self.nodes_queue, (ggc.cost,
+        #                                                 ggc, grandchild, False, mapOp[1]))
+        #                 # self.enqueue_node(ggc, grandchild, False, mapOp[1])
+        #                 self.write_trace_reduced(ggc)
+        #                 reducibleCtr += 1
+        #             elif ggc.state != states.EXPLORED:
+        #                 heappush(self.wait_queue, (ggc.cost,
+        #                                            ggc, grandchild, True, mapOp[1]))
+        #     # generate the WHY explanation
+            succ  = self.G.successors(child.id)
+            for node_id1 in succ:
+                grandchild = self.G.alist(node_id1)
                 self.write_trace(
                     '>>> {}-{}'.format(grandchild.id, str(grandchild)))
                 if grandchild.state != states.EXPLORED:
                     heappush(self.wait_queue, (grandchild.cost,
                                                grandchild, child, True, mapOp[1]))
+                
                 reducibleCtr = 0
-                for ggc in grandchild.children:
-                    ggc.node_type = nt.ZNODE
-                    ggc.set(tt.CONTEXT, child.get(tt.CONTEXT))
-                    self.write_graph(ggc, parent=grandchild, edge=mapOp[1])
-                    self.write_trace('>>>> {}-{}'.format(ggc.id, str(ggc)))
-                    if ggc.state == states.REDUCIBLE:
+                succ2  = self.G.successors(grandchild.id)
+                for node_id2 in succ2:
+                    ggchild = self.G.alist(node_id2)
+                    self.write_trace(
+                        '>>> {}-{}'.format(ggchild.id, str(ggchild)))
+                    if ggchild.state == states.REDUCIBLE:
                         if reducibleCtr == 0:
-                            heappush(self.nodes_queue, (ggc.cost,
-                                                        ggc, grandchild, False, mapOp[1]))
+                            heappush(self.nodes_queue, (ggchild.cost,
+                                                        ggchild, grandchild, False, mapOp[1]))
                         # self.enqueue_node(ggc, grandchild, False, mapOp[1])
-                        self.write_trace_reduced(ggc)
+                        self.write_trace_reduced(ggchild)
                         reducibleCtr += 1
-                    elif ggc.state != states.EXPLORED:
-                        heappush(self.wait_queue, (ggc.cost,
-                                                   ggc, grandchild, True, mapOp[1]))
-            # generate the WHY explanation
-            self.explainer.why(alist, mapOp[1])
+                    elif ggchild.state != states.EXPLORED:
+                        heappush(self.wait_queue, (ggchild.cost,
+                                                    ggchild, grandchild, True, mapOp[1]))
+
+            # self.explainer.why(alist, mapOp[1])
             return child
         else:
             return None
 
-    def aggregate(self, alist: Alist):
+    def aggregate(self, alist_id):
+        alist = self.G.alist(alist_id)
         self.last_heartbeat = time.time()
         self.write_trace('reducing:>><< {}-{}'.format(alist.id, alist))
 
@@ -382,15 +409,16 @@ class Execute:
             print(f"Cannot process {alist.get(tt.OP).lower()}")
 
         assert(reduce_op is not None)
-
-        reducibles = [x for x in alist.children
+        
+        children = self.G.child_alists(alist.id)
+        reducibles = [x for x in children
                       if x.state == states.REDUCIBLE and x.get(tt.OP).lower() != 'comp']
         for x in reducibles:
             self.write_trace('  <<< {}-{}'.format(x.id, x))
 
         unexplored = [
-            x for x in alist.children if x.state == states.UNEXPLORED]
-        if not reducibles or len(unexplored) == len(alist.children):
+            x for x in children if x.state == states.UNEXPLORED]
+        if not reducibles or len(unexplored) == len(children):
             return False  # there's nothing to reduce
 
         reducedAlist = reduce_op.reduce(alist, reducibles)
@@ -398,8 +426,8 @@ class Execute:
         last_heartbeat = time.time()
 
         if reducedAlist is not None:
-            for c in alist.children:
-                alist.data_sources.update(list(c.data_sources))
+            for c in children:
+                alist.data_sources = list(set(alist.data_sources + c.data_sources))
             alist.state = states.REDUCIBLE
             # these are there for the COMP operation that creates new nodes
             # after reducing
@@ -414,27 +442,27 @@ class Execute:
             alist.nodes_to_enqueue_only.clear()
             alist.nodes_to_enqueue_and_process.clear()
 
-            self.explainer.what(alist, True)
+            # self.explainer.what(alist, True)
             self.write_trace_reduced(alist)
             self.write_trace("reduced:<< {}-{}".format(alist.id, alist))
             return True
         else:
-            self.explainer.what(alist, False)
+            # self.explainer.what(alist, False)
             self.write_trace("reduce failed:<< {}-{}".format(alist.id, alist))
             return False
 
-    def propagate(self, alist: Alist):
+    def propagate(self, alist_id):
         self.last_heartbeat = time.time()
-        curr_alist = alist
-        self.write_trace('^^ {}-{}'.format(alist.id, alist))
+        curr_alist = self.G.alist(alist_id)
+        self.write_trace('^^ {}-{}'.format(curr_alist.id, curr_alist))
         try:
-            while curr_alist.parent:
+            while self.G.parent_ids(curr_alist.id):
                 # get the parent alist and apply its reduce operation to its
                 # children
-                if self.aggregate(curr_alist.parent[0]):
+                if self.aggregate(self.G.parent_ids(curr_alist.id)[0]):
                     # set the parent to the current alist and recurse up the
                     # tree
-                    curr_alist = curr_alist.parent[0]
+                    curr_alist = self.G.parent_alists(curr_alist.id)[0]
                 else:
                     return False
         except Exception as e:
@@ -444,15 +472,22 @@ class Execute:
         return True
 
     def write_trace_reduced(self, alist: Alist):
-        clogger.Logging().log(('redis', ',mset', True, '{}:alist:{}'.format(
-            self.session_id, alist.id), str(alist)))
-        self.write_graph(alist)
+        # clogger.Logging().log(('redis', ',mset', True, '{}:alist:{}'.format(
+        #     self.session_id, alist.id), str(alist)))
+        # self.write_graph(alist)
+        self.G.add_alist(alist)
 
     def write_trace(self, content, loglevel=processLog.LogLevel.INFO):
         processLog.println(content, processLog.LogLevel.INFO)
-        if(loglevel <= processLog.baseLogLevel):
-            # save log to redis store
-            clogger.Logging().log(('redis', 'lpush', False,  self.session_id + ':trace', content))
+        # if(loglevel <= processLog.baseLogLevel):
+        #     # save log to redis store
+        #     clogger.Logging().log(('redis', 'lpush', False,  self.session_id + ':trace', content))
 
     def write_graph(self, alist: Alist, parent: Alist = None, edge: str = None):
-        clogger.Logging().log(('neo4j', alist, parent, edge, self.session_id))
+        # clogger.Logging().log(('neo4j', alist, parent, edge, self.session_id))
+        # if parent:
+        #     self.G.add_alist(parent)
+        #     self.G.link(parent, alist, edge)
+        # else:
+        #     self.G.add_alist(alist)
+        pass

@@ -2,7 +2,7 @@
 File: scheduler.py
 Description: 
 Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
-Copyright 2014 - 2020  Kobby K.A. Nuamah
+
 '''
 import time
 import threading
@@ -19,6 +19,7 @@ from frank.alist import States as states
 from frank.alist import Branching as branching
 from frank import config
 from frank.util import utils
+from frank.graph import InferenceGraph
 
 from frank.cache.redis import RedisClientPool
 import frank.context
@@ -31,7 +32,9 @@ class Launcher():
         self.start_time = time.time()
 
     def start(self, alist: Alist, session_id):
-        self.frank_exec = Execute()
+        ''' Create new inference graph and execute'''
+        G = InferenceGraph()
+        self.frank_exec = Execute(G)
         self.frank_exec.session_id = session_id
         self.start_time = time.time()
         self.frank_exec.last_heartbeat = time.time()

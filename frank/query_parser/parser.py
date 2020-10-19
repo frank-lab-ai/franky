@@ -2,7 +2,7 @@
 File: parser.py
 Description: Template-based parser for NL queries.
 Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
-Copyright 2014 - 2020  Kobby K.A. Nuamah
+
 '''
 
 import datetime

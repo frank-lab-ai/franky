@@ -1,8 +1,8 @@
 '''
 File: alist.py
-Description: AlistB class and functions
+Description: Alist class and functions
 Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
-Copyright 2014 - 2020  Kobby K.A. Nuamah
+
 '''
 
 from copy import deepcopy
@@ -12,7 +12,6 @@ class AlistB:
 
     def __init__(self, **kwargs):
         self.attributes = {
-            Attributes.ID: kwargs[Attributes.ID] if Attributes.ID in kwargs else "0",
             Attributes.OP: kwargs[Attributes.OP] if Attributes.OP in kwargs else 'value',
             Attributes.SUBJECT: kwargs[Attributes.SUBJECT] if Attributes.SUBJECT in kwargs else '',
             Attributes.PROPERTY: kwargs[Attributes.PROPERTY] if Attributes.PROPERTY in kwargs else '',
@@ -22,15 +21,7 @@ class AlistB:
             Attributes.TIME: kwargs[Attributes.TIME] if Attributes.TIME in kwargs else '',
             Attributes.EXPLAIN: kwargs[Attributes.EXPLAIN] if Attributes.EXPLAIN in kwargs else '',
             Attributes.FNPLOT: kwargs[Attributes.FNPLOT] if Attributes.FNPLOT in kwargs else '',
-            Attributes.CONTEXT: kwargs[Attributes.CONTEXT] if Attributes.CONTEXT in kwargs else '',
-            'meta': {
-                'cost' : kwargs[Attributes.COST] if Attributes.COST in kwargs else 0.0,
-                'depth' : 0,
-                'state' : States.UNEXPLORED,
-                'data_sources' : set(),
-                'branch_type': Branching.OR,
-                'node_type': NodeTypes.ZNODE
-            }
+            Attributes.CONTEXT: kwargs[Attributes.CONTEXT] if Attributes.CONTEXT in kwargs else ''
         }
 
         for k in set(kwargs) - {Attributes.OP, Attributes.SUBJECT, Attributes.PROPERTY, Attributes.OBJECT,
@@ -38,14 +29,12 @@ class AlistB:
                                 Attributes.FNPLOT, Attributes.CONTEXT}:
             self.attributes[k] = kwargs[k]
 
-        # self.id = kwargs[Attributes.ID] if Attributes.ID in kwargs else "0"
-        # self.cost = kwargs[Attributes.COST] if Attributes.COST in kwargs else 0.0
-        # self.depth = 0
-        # self.state = States.UNEXPLORED
-        # self.data_sources = set()
-        # self.branch_type = Branching.OR
-        # self.node_type = NodeTypes.ZNODE
-
+        self.id = kwargs[Attributes.ID] if Attributes.ID in kwargs else "0"
+        self.cost = kwargs[Attributes.COST] if Attributes.COST in kwargs else 0.0
+        self.depth = 0
+        self.state = States.UNEXPLORED
+        self.data_sources = set()
+        self.branch_type = Branching.OR
         self.children = []
         self.parent = []
         # these are for set comprehension operations when a node spawns new nodes after reducing
@@ -53,63 +42,7 @@ class AlistB:
         self.nodes_to_enqueue_and_process = []
         self.parent_decomposition = ''
 
-        
-    @property
-    def id(self):
-        return self.attributes[Attributes.ID]
-
-    @id.setter
-    def id(self, value):
-        self.attributes[Attributes.ID] = value
-
-    @property
-    def cost(self):
-        return self.attributes['meta']['cost']
-
-    @cost.setter
-    def cost(self, value):
-        self.attributes['meta']['cost'] = value
-
-    @property
-    def depth(self):
-        return self.attributes['meta']['depth']
-
-    @depth.setter
-    def depth(self, value):
-        self.attributes['meta']['depth'] = value
-    
-    @property
-    def state(self):
-        return self.attributes['meta']['state']
-
-    @state.setter
-    def state(self, value):
-        self.attributes['meta']['state'] = value
-    
-    @property
-    def data_sources(self):
-        return self.attributes['meta']['data_sources']
-
-    @data_sources.setter
-    def data_sources(self, value):
-        self.attributes['meta']['data_sources'] = value
-
-    @property
-    def branch_type(self):
-        return self.attributes['meta']['branch_type']
-
-    @branch_type.setter
-    def branch_type(self, value):
-        self.attributes['meta']['branch_type'] = value
-
-    @property
-    def node_type(self):
-        return self.attributes['meta']['node_type']
-
-    @node_type.setter
-    def node_type(self, value):
-        self.attributes['meta']['node_type'] = value
-
+        self.node_type = NodeTypes.ZNODE
 
     def set(self, attribute, value):
         """
@@ -297,7 +230,7 @@ class AlistB:
         return str(self.get_alist_json_with_metadata())
 
 
-# AlistB States
+# Alist States
 class States:
     IGNORE = -1
     UNEXPLORED = 0
@@ -312,7 +245,7 @@ class Branching:
     AND = 'and'
 
 
-# AlistB attribute names
+# Alist attribute names
 class Attributes:
     ID = 'id'
     SUBJECT = 's'

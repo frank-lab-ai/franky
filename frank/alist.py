@@ -2,7 +2,7 @@
 File: alist.py
 Description: Alist class and functions
 Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
-Copyright 2014 - 2020  Kobby K.A. Nuamah
+
 '''
 
 from copy import deepcopy
@@ -27,7 +27,7 @@ class Alist:
                 'cost' : kwargs[Attributes.COST] if Attributes.COST in kwargs else 0.0,
                 'depth' : 0,
                 'state' : States.UNEXPLORED,
-                'data_sources' : set(),
+                'data_sources' : [],
                 'branch_type': Branching.OR,
                 'node_type': NodeTypes.ZNODE
             }
@@ -248,18 +248,6 @@ class Alist:
             return variables
         else:
             return None
-
-    # def prune(self):
-    #     """ 
-    #     Unlink the variable from its parents and children 
-    #     and set its state to PRUNED such that it is not processed 
-    #     """
-    #     self.state = States.PRUNED
-    #     # unlink from parent
-    #     self.parent[0].children.remove(self)
-    #     self.parent.clear()
-    #     for c in self.children:
-    #         c.prune()
 
     def instantiate_variable(self, varName, varValue, insert_missing=True):
         """

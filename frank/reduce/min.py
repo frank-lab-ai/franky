@@ -2,7 +2,7 @@
 File: min.py
 Description: minimum reduce operation
 Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
-Copyright 2014 - 2020  Kobby K.A. Nuamah
+
 '''
 
 from typing import List
