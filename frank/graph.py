@@ -8,6 +8,7 @@ Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
 import networkx as nx
 import matplotlib.pyplot as plt
 from frank.alist import Alist
+from frank.alist import States as st
 
 
 class InferenceGraph(nx.DiGraph):
@@ -68,14 +69,41 @@ class InferenceGraph(nx.DiGraph):
         else:
             self.add_alist(child)
 
-    def leaf_nodes(self):
-        return [x for x in self.nodes() if self.out_degree(x) == 0 and self.in_degree(x) > 0]
+    def leaf_nodes(self, sort=False, sort_key=None):
+        nodes = [x for x in self.nodes() if self.out_degree(x) == 0 ]       
+        return nodes
+    
+    def leaf_alists(self, sort=False, sort_key=None):
+        nodes = [Alist(**self.nodes[x]) for x in self.nodes() if self.out_degree(x) == 0]
+
+        if sort and sort_key:
+            nodes.sort(key=sort_key)
+        elif sort and not sort_key:
+            nodes.sort(key = lambda x: x.attributes['meta']['cost'])
+        
+        return nodes
 
     def prune(self, alist_id):
         succ = nx.bfs_successors(self, alist_id)    
         for s in succ:
             self.remove_nodes_from(s[1])
         self.remove_node(alist_id)
+
+    def frontier(self, size=1, update_state=True):
+        ''' Get a leaf node that are not in a reducible state '''
+        sorted_leaves = self.leaf_alists(sort=True)
+        top = []
+        for n in sorted_leaves:
+            if n.state == st.UNEXPLORED:
+                n.state = st.EXPLORING
+                top.append(n)
+            if len(top) >= size:
+                break
+        if update_state:
+            for t in top:
+                self.add_alist(n)
+                
+        return top
         
         
     

@@ -290,6 +290,7 @@ class States:
     EXPLORED = 1
     REDUCIBLE = 2
     PRUNED = 3
+    EXPLORING = 4
 
 
 # branching options

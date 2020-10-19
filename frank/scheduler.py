@@ -55,29 +55,49 @@ class Launcher():
             # stop and print any answer found
             self.cache_and_print_answer(True)
 
-        while self.frank_exec.nodes_queue:
-            # TODO: setup concurrency
-            propagatedToRoot = self.frank_exec.run_frank(
-                heappop(self.frank_exec.nodes_queue)[1])
-            if propagatedToRoot:
-                self.cache_and_print_answer(False)
+        
+        while True:
+            frontier = self.frank_exec.G.frontier()
+            if frontier:
+                propagatedToRoot = self.frank_exec.run_frank(frontier[0])
+                if propagatedToRoot:
+                    self.cache_and_print_answer(False)
+            else:
+                break
 
-        # else if no answer has been propagated to root and
-        if not self.frank_exec.answer_propagated_to_root and self.frank_exec.wait_queue:
-            # if self.frank_exec.wait_queue:
-            while self.frank_exec.wait_queue:
-                n = heappop(self.frank_exec.wait_queue)
-                self.frank_exec.enqueue_node(n[1], n[2], n[3], n[4])
-                # heappush(self.frank_exec.nodes_queue, heappop(self.frank_exec.wait_queue))
-        elif time.time() - self.frank_exec.last_heartbeat <= self.timeout:
+        # if no answer has been propagated to root and        
+        if time.time() - self.frank_exec.last_heartbeat <= self.timeout:
             time.sleep(3)
-
-        # if items to be processed in nodes_queue
-        if self.frank_exec.nodes_queue:
+        
+        if self.frank_exec.G.frontier(update_state=False):
             self.schedule()
         else:
             # stop and print any answer found
             self.cache_and_print_answer(True)
+
+        # while self.frank_exec.nodes_queue:
+        #     # TODO: setup concurrency
+        #     propagatedToRoot = self.frank_exec.run_frank(
+        #         heappop(self.frank_exec.nodes_queue)[1])
+        #     if propagatedToRoot:
+        #         self.cache_and_print_answer(False)
+
+        # else if no answer has been propagated to root and
+        # if not self.frank_exec.answer_propagated_to_root and self.frank_exec.wait_queue:
+        #     # if self.frank_exec.wait_queue:
+        #     while self.frank_exec.wait_queue:
+        #         n = heappop(self.frank_exec.wait_queue)
+        #         self.frank_exec.enqueue_node(n[1], n[2], n[3], n[4])
+        #         # heappush(self.frank_exec.nodes_queue, heappop(self.frank_exec.wait_queue))
+        # elif time.time() - self.frank_exec.last_heartbeat <= self.timeout:
+        #     time.sleep(3)
+
+        # if items to be processed in nodes_queue
+        # if self.frank_exec.nodes_queue:
+        #     self.schedule()
+        # else:
+        #     # stop and print any answer found
+        #     self.cache_and_print_answer(True)
 
     def cache_and_print_answer(self, isFinal=False):
         elapsed_time = time.time() - self.start_time

@@ -106,40 +106,40 @@ class Explanation():
         '''
 
         '''
-    Saliency ordering: Some decompositions and aggregation operations are not important given their distance
-    from the node being explained.
-      VALUE nodes based on a LOOKUP decomposition do not need to be explained. State the fact that the value was retrieved.
-      Multiple VALUE nodes from LOOKUPs of a node can be simplified as "values looked up from DISTINCT(sources).
-      Any VALUE child node that was not retrieved and hence decomposed for further lookup should be highlighted; but no need to
-      specify the details of that operation if it falls outside the explanation blanket.
-      Any VALUE node for which instantiation failed should be highlighted in the explanation.
-      Synonyms for "enclosures" or "scope" to replace "blanket".
+        Saliency ordering: Some decompositions and aggregation operations are not important given their distance
+        from the node being explained.
+        VALUE nodes based on a LOOKUP decomposition do not need to be explained. State the fact that the value was retrieved.
+        Multiple VALUE nodes from LOOKUPs of a node can be simplified as "values looked up from DISTINCT(sources).
+        Any VALUE child node that was not retrieved and hence decomposed for further lookup should be highlighted; but no need to
+        specify the details of that operation if it falls outside the explanation blanket.
+        Any VALUE node for which instantiation failed should be highlighted in the explanation.
+        Synonyms for "enclosures" or "scope" to replace "blanket".
 
-    Repetition rule: Should not repeat the same explanation for child nodes with the same operation.
-      Instead summarise as one explanation and only highlight differences: e.g. failed instantiations, high uncertainties.
+        Repetition rule: Should not repeat the same explanation for child nodes with the same operation.
+        Instead summarise as one explanation and only highlight differences: e.g. failed instantiations, high uncertainties.
 
-    General procedure for generating the explanation for a node.
-      FRANK generates an explanation of length 1 for each node as part of inference.
-      To generate an explanation with length > 1, 
-        1. ancestors of n*: recursively propagate explanations from parents to their children by appending.
-          This explanation should provide a "causal explanation" or justification of the decomposition operation at n*.
-        2. descendants of n* : recursively propagate and append explantions from child nodes 
-      to their parents. This provides a justification of the aggregation operation at n*.
-        3. at n*: a detailed explanation of any aggregation operation performed at n* and the decomposition performed
+        General procedure for generating the explanation for a node.
+        FRANK generates an explanation of length 1 for each node as part of inference.
+        To generate an explanation with length > 1, 
+            1. ancestors of n*: recursively propagate explanations from parents to their children by appending.
+            This explanation should provide a "causal explanation" or justification of the decomposition operation at n*.
+            2. descendants of n* : recursively propagate and append explantions from child nodes 
+        to their parents. This provides a justification of the aggregation operation at n*.
+            3. at n*: a detailed explanation of any aggregation operation performed at n* and the decomposition performed
 
-    Structure of the explanation template:
-      <at n*> by <descendants of n*> in the context of <ancestors of n*>
-    E.g:  The predicted population of Ghana in 2017 using regression function based on values from past years is 
-          26,500,000 with an error margin of +/-35,000.
-          Retrieved the population values between 1990 and 2010 from the World Bank and Wikidata.
-          Had to predict the population of Ghana in 2017 since I needed to calculate the total population of Africa in 2017
-          but could not find any value for the population of Africa in 2017. After decomposing Africa into its parts, I also
-          could not find the population of Ghana in 2017.
+        Structure of the explanation template:
+        <at n*> by <descendants of n*> in the context of <ancestors of n*>
+        E.g:  The predicted population of Ghana in 2017 using regression function based on values from past years is 
+            26,500,000 with an error margin of +/-35,000.
+            Retrieved the population values between 1990 and 2010 from the World Bank and Wikidata.
+            Had to predict the population of Ghana in 2017 since I needed to calculate the total population of Africa in 2017
+            but could not find any value for the population of Africa in 2017. After decomposing Africa into its parts, I also
+            could not find the population of Ghana in 2017.
 
-    Return an object containing a fully composed explanation as well as the partial explanations for WHAT, WHY and HOW.
+        Return an object containing a fully composed explanation as well as the partial explanations for WHAT, WHY and HOW.
 
 
-    '''
+        '''
         explanation = {"all": "", "what": "", "how": "", "why": ""}
 
         # get n_star node

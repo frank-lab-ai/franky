@@ -139,8 +139,10 @@ class Execute:
         if bool_result:
             if alist.state != states.REDUCIBLE:  # if in reducible state, don't change
                 alist.state = states.EXPLORED
+                self.G.add_alist(alist)
             if agg_instantiated and proj_instantiated:
                 alist.state = states.REDUCIBLE
+                self.G.add_alist(alist)
             if self.G.child_ids(alist.id):
                 propagated_to_root = self.propagate(self.G.child_ids(alist.id)[0])
             else:
@@ -148,11 +150,13 @@ class Execute:
                     self.G.child_ids(self.G.parent_ids(alist.id)[0])[0])
 
             if propagated_to_root:
+                prop_alist = self.G.alist(self.root.id)
                 self.write_trace("intermediate ans:>> {}-{}".format(
-                    self.root.id, self.root), loglevel=processLog.LogLevel.ANSWER)
-                self.answer_propagated_to_root.append(self.root.copy())
+                    prop_alist.id, prop_alist), loglevel=processLog.LogLevel.ANSWER)
+                self.answer_propagated_to_root.append(prop_alist.copy())
         else:
             alist.state = states.EXPLORED
+            self.G.add_alist(alist)
             for mapOp in self.get_map_strategy(alist):
                 self.decompose(alist, mapOp)
         return propagated_to_root

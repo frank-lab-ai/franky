@@ -74,13 +74,14 @@ class Test_Graph(unittest.TestCase):
         parent = Alist(**{tt.ID: '1', tt.SUBJECT: 'Africa', tt.PROPERTY: 'P1082',
                           tt.OBJECT: '', tt.TIME: '2010', tt.OPVAR: '?x', tt.COST: 1})
         child = Alist(**{tt.ID: '1', tt.SUBJECT: 'Ghana', tt.PROPERTY: 'P1082',
-                         tt.OBJECT: '', tt.TIME: '2010', tt.OPVAR: '?x', tt.COST: 1})
-        child2 = Alist(**{tt.ID: '1', tt.SUBJECT: 'Ghana', tt.PROPERTY: 'P1082',
-                          tt.OBJECT: '', tt.TIME: '2010', tt.OPVAR: '?x', tt.COST: 1})
-        grandchild = Alist(**{tt.ID: '1', tt.SUBJECT: 'Ghana', tt.PROPERTY: 'P1082',
-                              tt.OBJECT: '', tt.TIME: '2010', tt.OPVAR: '?x', tt.COST: 1})
-        ggrandchild = Alist(**{tt.ID: '1', tt.SUBJECT: 'Ghana', tt.PROPERTY: 'P1082',
-                              tt.OBJECT: '', tt.TIME: '2010', tt.OPVAR: '?x', tt.COST: 1})
+                         tt.OBJECT: '', tt.TIME: '2010', tt.OPVAR: '?x', tt.COST: 2})
+        child2 = Alist(**{tt.ID: '1', tt.SUBJECT: 'a_Ghana', tt.PROPERTY: 'P1082',
+                          tt.OBJECT: '', tt.TIME: '2010', tt.OPVAR: '?x', tt.COST: 5})
+        grandchild = Alist(**{tt.ID: '1', tt.SUBJECT: 'b_Ghana', tt.PROPERTY: 'P1082',
+                              tt.OBJECT: '', tt.TIME: '2010', tt.OPVAR: '?x', tt.COST: 3})
+        ggrandchild = Alist(**{tt.ID: '1', tt.SUBJECT: 'c_Ghana', tt.PROPERTY: 'P1082',
+                              tt.OBJECT: '', tt.TIME: '2010', tt.OPVAR: '?x', tt.COST: 4})
+        # ggrandchild.state = states.EXPLORED
         graph.add_alists_from([parent])  
         graph.link(parent, child, edge_label='TP')
         graph.link(parent, child2, edge_label='GS')
@@ -111,6 +112,11 @@ class Test_Graph(unittest.TestCase):
         print(leaves)
         self.assertTrue(len(leaves) > 0)
 
+    def test_get_leaves_sorted(self):
+        graph = self.create_graph2()
+        leaves = graph.leaf_alists(sort=True)
+        self.assertTrue(leaves[0].cost <= leaves[1].cost)
+
     def test_prune(self):
         graph = self.create_graph2()
         plt.ion()
@@ -126,6 +132,12 @@ class Test_Graph(unittest.TestCase):
     
         self.assertTrue(graph.number_of_nodes() == 2)
     
+    def test_frontier(self):
+        graph = self.create_graph2()
+        frontier1 = graph.frontier()
+        frontier2 = graph.frontier(2)
+        self.assertTrue(len(frontier1)==1 and len(frontier2)==1)
+
 
 
 
