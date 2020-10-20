@@ -11,14 +11,14 @@ from frank.alist import States as states
 from frank.alist import Branching as branching
 from frank.alist import NodeTypes as nt
 from frank import config
-import frank.cache.neo4j
+# import frank.cache.neo4j
 from frank.graph import InferenceGraph
 
 
 class Explanation():
 
     def __init__(self):
-        self.driver = frank.cache.neo4j.get_driver()
+        # self.driver = frank.cache.neo4j.get_driver()
         self.ops_text = {'value': 'value', 'max': 'maximum value', 'min': 'minimum value', 'avg': 'average',
                          'mean': 'average', 'mode': 'modal value', 'regress': 'predicted value',
                          'linregress': 'predicted value',
@@ -100,7 +100,7 @@ class Explanation():
 
         return alist
 
-    def generateExplanation(self, node_id, graph_alists: list, descendant_blanket_length=1, ancestor_blanket_length=1):
+    def generateExplanation(self, G:InferenceGraph, node_id, descendant_blanket_length=1, ancestor_blanket_length=1):
         ''' Generate explanation of a node given its blanket
 
         '''
@@ -143,14 +143,14 @@ class Explanation():
         explanation = {"all": "", "what": "", "how": "", "why": ""}
 
         # get n_star node
-        n_star: Alist = [x for x in graph_alists if x.id == node_id]
+        n_star: Alist = G.alist(node_id)
         if not n_star:
             return ''
-        n_star = n_star[0]
+        # n_star = n_star[0]
 
-        ancestors = self.ancestor_explanation(
+        ancestors = self.ancestor_explanation(G,
             n_star, "", int(ancestor_blanket_length), 1).strip()
-        descendants = self.descendant_explanation(
+        descendants = self.descendant_explanation(G,
             n_star, "", int(descendant_blanket_length), 1).strip()
         self_exp = f"{n_star.get('what') if 'what' in n_star.attributes else ''} {n_star.get('how') if 'how' in n_star.attributes else ''} "
         sources = self.sources(n_star)
@@ -397,17 +397,19 @@ class Explanation():
 
         return summary
 
-    def why(self, alist: Alist, decomp_op, in_place=True):
+    def why(self, G:InferenceGraph,  alist: Alist, decomp_op, in_place=True):
         ''' Explain a decomposition of this alist. 
             Assumes a failed instantiation of this alist following KB searches'''
         expl = ""
         time = ""
+        children = G.child_alists(alist.id)
         if alist.get(tt.TIME):
             time = f" in {alist.get(tt.TIME)}"
         if decomp_op == 'temporal':
             expl = f"Could not find the {alist.get(tt.PROPERTY)} of {alist.instantiation_value(tt.SUBJECT)}{time}. "
             decomp_items = []
-            for c in alist.children[0].children:
+            # for c in alist.children[0].children:
+            for c in children:
                 decomp_items.append(c.get(tt.TIME))
             if len(decomp_items) >= 2:
                 expl += f"Attempted to infer the required value{time} by finding the {alist.get(tt.PROPERTY)} of {alist.instantiation_value(tt.SUBJECT)} " + \
@@ -416,7 +418,8 @@ class Explanation():
         elif decomp_op == 'geospatial':
             expl = f"Could not find the {alist.get(tt.PROPERTY)} of {alist.instantiation_value(tt.SUBJECT)}{time}. "
             decomp_items = []
-            for c in alist.children[0].children:
+            # for c in alist.children[0].children:
+            for c in G.child_alists(children[0].id):
                 decomp_items.append(c.instantiation_value(tt.SUBJECT))
             entities = ''
             if len(decomp_items) > 8:
@@ -435,8 +438,9 @@ class Explanation():
 
         if in_place:
             alist.set("why", expl)
+            G.add_alist(alist)
 
-    def what(self, alist: Alist, is_reduced: bool, in_place=True):
+    def what(self, G: InferenceGraph, alist: Alist, is_reduced: bool, in_place=True):
         ''' Explain a reduction of this alist. 
         '''
         what = ''
@@ -460,7 +464,8 @@ class Explanation():
                 vars_compared = alist.get(tt.OPVAR).split(' ')
                 if len(vars_compared) > 1:
                     what = f"Inferred value is '{alist.instantiation_value('?'+ alist.get(tt.OP))}'."
-                    how = f"Did a comparison to determine if {alist.instantiation_value(vars_compared[0])} is {self.ops_text[alist.get(tt.OP)]} {alist.instantiation_value(vars_compared[1])}."
+                    how = f"Did a comparison to determine if {alist.instantiation_value(vars_compared[0])} is " + \
+                          f"{self.ops_text[alist.get(tt.OP)]} {alist.instantiation_value(vars_compared[1])}."
             elif alist.get(tt.OP) in ['comp']:
                 listed_str = ''
                 listed = alist.instantiation_value(
@@ -500,22 +505,18 @@ class Explanation():
                         what = f"The {self.ops_text[alist.get(tt.OP)]} of the {alist.get(tt.PROPERTY)} of {alist.instantiation_value(tt.SUBJECT)}{time} is {inferred_value}."
                 if alist.get(tt.OP) in ['regress', 'nnpredict', 'linregress', 'gpregress', 'nnregress']:
                     decomp_items = []
-                    for c in alist.children[0].children:
+                    children = G.child_alists(alist.id)
+                    # for c in alist.children[0].children:                    
+                    for c in G.child_alists(children[0].id):
                         decomp_items.append(c.get(tt.TIME))
                     if len(decomp_items) > 0:
                         how = f"Generated a regression function from times between {min(decomp_items)} and {max(decomp_items)}."
 
-            # if alist.children[0].node_type == nt.FACT and alist.data_sources:
-            #   sources = ''
-            #   if len(alist.data_sources) ==1:
-            #     sources = f"{list(alist.data_sources)[0]}".strip()
-            #   elif len(alist.data_sources) > 1:
-            #     sources = f"{', '.join(list(alist.data_sources)[0:len(alist.data_sources)-1])} and {list(alist.data_sources)[-1]}".strip()
-            #   how += f"Facts were retrieved from the {sources} knowledge {'sources' if len(alist.data_sources) > 1 else 'source'}."
-
         if in_place:
             alist.set("what", what)
             alist.set("how", how)
+            G.add_alist(alist)
+
 
     def sources(self, alist):
         sources = ''
@@ -527,25 +528,20 @@ class Explanation():
 
         return f"Retrieved fact(s) from the {sources} knowledge {'sources' if len(alist.data_sources) > 1 else 'source'}."
 
-    def ancestor_explanation(self, alist: Alist, summary, max_length, length):
+    def ancestor_explanation(self, G:InferenceGraph, alist: Alist, summary, max_length, length):
         if length <= max_length:
-            for parent in alist.parent:
+            # for parent in alist.parent:
+            for parent in G.parent_alists(alist.id):
                 summary = f"{parent.get('why') if 'why' in parent.attributes else ''} {summary}".strip(
                 )
-                summary = self.ancestor_explanation(
-                    parent, summary, max_length, length+1)
-
-                # for p in parent.parent:
-                #   summary = self.ancestor_explanation(p, summary, max_length, length+1)
+                summary = self.ancestor_explanation(G, parent, summary, max_length, length+1)
         return summary
 
-    def descendant_explanation(self, alist: Alist, summary, max_length, length):
+    def descendant_explanation(self, G:InferenceGraph, alist: Alist, summary, max_length, length):
         if length <= max_length:
-            for child in alist.children:
+            # for child in alist.children:
+            for child in G.child_alists(alist.id):
                 summary = f"{summary}{' ' + child.get('how') if 'how' in child.attributes else ''}" + \
                     f"{' ' + child.get('what') if 'what' in child.attributes else ''}".strip()
-                summary = self.descendant_explanation(
-                    child, summary, max_length, length+1)
-                # for c in child.children:
-                #   summary = self.descendant_explanation(c, summary, max_length, length+1)
+                summary = self.descendant_explanation(G, child, summary, max_length, length+1)
         return summary

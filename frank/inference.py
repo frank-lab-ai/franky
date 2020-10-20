@@ -12,7 +12,7 @@ import time
 from heapq import heappop, heappush
 
 import frank.cache.logger as clogger
-import frank.cache.neo4j
+# import frank.cache.neo4j
 import frank.map.map_wrapper
 import frank.processLog
 import frank.reduce.comp
@@ -72,25 +72,26 @@ class Execute:
         self.G.add_alist(alist)
 
     def enqueue_node(self, alist: Alist, parent: Alist, to_be_processed: bool, decomp_rule: str):
-        try:
-            # if to_be_processed:
-            #     heappush(self.nodes_queue, (alist.cost, alist,
-            #                                 parent, to_be_processed, decomp_rule))
-            self.graph_nodes.append(alist)
-            if parent is not None:
-                self.graph_edges.append((parent.id, alist.id))
-            # # update the trace store
-            # clogger.Logging().log(
-            #     (clogger.REDIS, 'lpush', True, self.session_id + ':graphNodes', str(alist)))
-            # if parent:
-            #     clogger.Logging().log(('redis', 'lpush', True,
-            #                            self.session_id +
-            #                            ':graphEdges', str(alist),
-            #                            '{{"source":"{}", "target":"{}" }}'.format(parent.id, alist.id)))
-            # self.write_graph(alist, parent=parent, edge=decomp_rule)
-            # self.G.link(parent, alist, decomp_rule)
-        except Exception:
-            print("Exception occurred when adding node to queue")
+        # try:
+        #     # if to_be_processed:
+        #     #     heappush(self.nodes_queue, (alist.cost, alist,
+        #     #                                 parent, to_be_processed, decomp_rule))
+        #     self.graph_nodes.append(alist)
+        #     if parent is not None:
+        #         self.graph_edges.append((parent.id, alist.id))
+        #     # # update the trace store
+        #     # clogger.Logging().log(
+        #     #     (clogger.REDIS, 'lpush', True, self.session_id + ':graphNodes', str(alist)))
+        #     # if parent:
+        #     #     clogger.Logging().log(('redis', 'lpush', True,
+        #     #                            self.session_id +
+        #     #                            ':graphEdges', str(alist),
+        #     #                            '{{"source":"{}", "target":"{}" }}'.format(parent.id, alist.id)))
+        #     # self.write_graph(alist, parent=parent, edge=decomp_rule)
+        #     # self.G.link(parent, alist, decomp_rule)
+        # except Exception:
+        #     print("Exception occurred when adding node to queue")
+        pass
 
     def run_frank(self, alist: Alist):
         '''
@@ -106,12 +107,6 @@ class Execute:
             return propagated_to_root
 
         bool_result = False
-        # check if OPVAR is instantiated
-        # if OPVAR is instantiated, set bool_result to TRUE
-        # if alist.is_instantiated(alist.get(tt.OPVAR)):
-        #     bool_result = True
-        # if the the projection vars are already instantiated
-        #   then make the alist reducible and return True
         proj_vars = alist.projection_variables()
         proj_instantiated = True
         if proj_vars:
@@ -130,7 +125,7 @@ class Execute:
 
         if bool_result:
             alist.state = states.REDUCIBLE
-            self.write_trace_reduced(alist)  # to change state in cache
+            self.G.add_alist(alist)
         # if OPVAR not instantiated, search KB
         elif not bool_result:
             bool_result = self.search_kb(alist)
@@ -214,9 +209,10 @@ class Execute:
                 searchable_attr = list(filter(lambda x: x != search_attr,
                                             [tt.SUBJECT, tt.PROPERTY, tt.OBJECT, tt.TIME]))
                 # search with original property name
-                (cache_found_flag, results) = frank.cache.neo4j.search_cache(alist_to_instantiate=search_alist,
-                                                                        attribute_to_instantiate=search_attr,
-                                                                        search_attributes=searchable_attr)
+                (cache_found_flag, results) = (False, [])
+                # (cache_found_flag, results) = frank.cache.neo4j.search_cache(alist_to_instantiate=search_alist,
+                #                                                         attribute_to_instantiate=search_attr,
+                #                                                         search_attributes=searchable_attr)
                 if cache_found_flag == True:
                     found_facts.append(results[0])
                 # search with source-specific property IDs
@@ -224,9 +220,10 @@ class Execute:
                 for (propid, _source_name) in self.property_refs[prop_string]:
                     self.last_heartbeat = time.time()
                     search_alist.set(tt.PROPERTY, propid[0])
-                    (cache_found_flag, results) = frank.cache.neo4j.search_cache(alist_to_instantiate=search_alist,
-                                                                            attribute_to_instantiate=search_attr,
-                                                                            search_attributes=searchable_attr)
+                    (cache_found_flag, results) = (False, [])
+                    #  = frank.cache.neo4j.search_cache(alist_to_instantiate=search_alist,
+                    #                                                         attribute_to_instantiate=search_attr,
+                    #                                                         search_attributes=searchable_attr)
                     if cache_found_flag == True:
                         found_facts.append(results[0])
                         self.write_trace('found:>>> cache')
@@ -330,73 +327,24 @@ class Execute:
         child = mapOp[0](alist, self.G)
         # check for query context
         context = alist.get(tt.CONTEXT)
-        # if child and context:            
-        #     # do no assume child query context is the same as parent
-        #     child.set(tt.CONTEXT, [context[0], context[1],{}])
-        #     frank.context.inject_query_context(child)
         self.last_heartbeat = time.time()
         if child is not None:
-            # child.node_type = nt.HNODE
-            self.write_trace('>> {}-{}'.format(child.id, str(child)))
-            # self.write_graph(child, parent=alist, edge=mapOp[1])
-        #     if child.state != states.EXPLORED:
-        #         child.parent_decomposition = mapOp[1]
-        #         heappush(self.wait_queue, (child.cost,
-        #                                    child, alist, False, mapOp[1]))
-
-        #     for grandchild in child.children:
-        #         # grandchild.node_type = nt.ZNODE
-        #         grandchild.set(tt.CONTEXT, child.get(tt.CONTEXT))
-        #         self.write_graph(grandchild, parent=child, edge=mapOp[1])
-        #         self.write_trace(
-        #             '>>> {}-{}'.format(grandchild.id, str(grandchild)))
-        #         if grandchild.state != states.EXPLORED:
-        #             heappush(self.wait_queue, (grandchild.cost,
-        #                                        grandchild, child, True, mapOp[1]))
-        #         reducibleCtr = 0
-        #         for ggc in grandchild.children:
-        #             ggc.node_type = nt.ZNODE
-        #             ggc.set(tt.CONTEXT, child.get(tt.CONTEXT))
-        #             self.write_graph(ggc, parent=grandchild, edge=mapOp[1])
-        #             self.write_trace('>>>> {}-{}'.format(ggc.id, str(ggc)))
-        #             if ggc.state == states.REDUCIBLE:
-        #                 if reducibleCtr == 0:
-        #                     heappush(self.nodes_queue, (ggc.cost,
-        #                                                 ggc, grandchild, False, mapOp[1]))
-        #                 # self.enqueue_node(ggc, grandchild, False, mapOp[1])
-        #                 self.write_trace_reduced(ggc)
-        #                 reducibleCtr += 1
-        #             elif ggc.state != states.EXPLORED:
-        #                 heappush(self.wait_queue, (ggc.cost,
-        #                                            ggc, grandchild, True, mapOp[1]))
-        #     # generate the WHY explanation
+            self.write_trace('>> {}-{}'.format(child.id, str(child)))  
             succ  = self.G.successors(child.id)
             for node_id1 in succ:
                 grandchild = self.G.alist(node_id1)
-                self.write_trace(
-                    '>>> {}-{}'.format(grandchild.id, str(grandchild)))
-                # if grandchild.state != states.EXPLORED:
-                #     heappush(self.wait_queue, (grandchild.cost,
-                #                                grandchild, child, True, mapOp[1]))
-                
+                self.write_trace('>>> {}-{}'.format(grandchild.id, str(grandchild)))
                 reducibleCtr = 0
                 succ2  = self.G.successors(grandchild.id)
                 for node_id2 in succ2:
                     ggchild = self.G.alist(node_id2)
                     self.write_trace(
                         '>>> {}-{}'.format(ggchild.id, str(ggchild)))
-                    if ggchild.state == states.REDUCIBLE:
-                    #     if reducibleCtr == 0:
-                    #         heappush(self.nodes_queue, (ggchild.cost,
-                    #                                     ggchild, grandchild, False, mapOp[1]))
-                        # self.enqueue_node(ggc, grandchild, False, mapOp[1])
-                        self.write_trace_reduced(ggchild)
+                    if ggchild.state == states.REDUCIBLE:   
+                        self.G.add_alist(ggchild)
                         reducibleCtr += 1
-                    # elif ggchild.state != states.EXPLORED:
-                    #     heappush(self.wait_queue, (ggchild.cost,
-                    #                                 ggchild, grandchild, True, mapOp[1]))
-
-            # self.explainer.why(alist, mapOp[1])
+            # generate the WHY explanation
+            self.explainer.why(self.G, alist, mapOp[1])
             return child
         else:
             return None
@@ -451,12 +399,11 @@ class Execute:
             alist.nodes_to_enqueue_only.clear()
             alist.nodes_to_enqueue_and_process.clear()
             self.G.add_alist(alist)
-            # self.explainer.what(alist, True)
-            self.write_trace_reduced(alist)
+            self.explainer.what(self.G, alist, True)
             self.write_trace("reduced:<< {}-{}".format(alist.id, alist))
             return True
         else:
-            # self.explainer.what(alist, False)
+            self.explainer.what(self.G, alist, False)
             self.write_trace("reduce failed:<< {}-{}".format(alist.id, alist))
             return False
 

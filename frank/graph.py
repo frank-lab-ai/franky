@@ -57,6 +57,18 @@ class InferenceGraph(nx.DiGraph):
             return alist
         except:
             return None
+    
+    def alists(self):
+        alists = [Alist(**self.nodes[x]) for x in self.nodes()]
+        return alists
+
+    def alists_and_edges(self):
+        edges = [{'source': x[0], 'target': x[1], 'label':self[x[0]][x[1]]['label']} for x in self.edges()]
+        return edges
+
+    def ui_graph(self):
+        nodes = [x.attributes for x in self.alists()]
+        return {'nodes': nodes, 'edges': self.alists_and_edges()}
         
     def link(self, parent:Alist, child:Alist, edge_label=''):
         if parent:
@@ -104,6 +116,14 @@ class InferenceGraph(nx.DiGraph):
                 self.add_alist(t)
                 
         return top
+
+    def blanket_subgraph(self, alist_id, ancestor_length=1, descendant_length=1):
+        ancestors = nx.single_target_shortest_path(self, alist_id, cutoff=ancestor_length)
+        descendants = nx.single_source_shortest_path(self, alist_id, cutoff=descendant_length)
+        nodes = set(list(ancestors.keys()) + list(descendants.keys()))
+        blanket = self.subgraph(nodes)
+        return blanket
+    
         
         
     

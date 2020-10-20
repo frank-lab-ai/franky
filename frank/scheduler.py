@@ -21,7 +21,7 @@ from frank import config
 from frank.util import utils
 from frank.graph import InferenceGraph
 
-from frank.cache.redis import RedisClientPool
+# from frank.cache.redis import RedisClientPool
 import frank.context
 
 class Launcher():
@@ -30,12 +30,14 @@ class Launcher():
         self.frank_exec: Execute = None
         self.timeout = 60  # self.timeout in seconds
         self.start_time = time.time()
+        self.inference_graphs = {}
 
-    def start(self, alist: Alist, session_id):
+    def start(self, alist: Alist, session_id, inference_graphs):
         ''' Create new inference graph and execute'''
         G = InferenceGraph()
         self.frank_exec = Execute(G)
         self.frank_exec.session_id = session_id
+        self.inference_graphs = inference_graphs
         self.start_time = time.time()
         self.frank_exec.last_heartbeat = time.time()
         print(f"session-id: {self.frank_exec.session_id}")
@@ -43,10 +45,10 @@ class Launcher():
         self.frank_exec.enqueue_root(alist)
         self.schedule(-1)
 
-    def start_for_api(self, alist_obj, session_id):
+    def start_for_api(self, alist_obj, session_id, inference_graphs):
 
         a = Alist(**alist_obj)
-        t = threading.Thread(target=self.start, args=(a, session_id))
+        t = threading.Thread(target=self.start, args=(a, session_id, inference_graphs))
         t.start()
         return session_id
 
@@ -54,7 +56,6 @@ class Launcher():
         if time.time() - self.frank_exec.last_heartbeat > self.timeout:
             # stop and print any answer found
             self.cache_and_print_answer(True)
-
         
         max_prop_depth_diff = 1
         stop_flag = False
@@ -71,7 +72,7 @@ class Launcher():
             if not flag:
                 # check if there are any unexplored leaf nodes
                 unexplored = self.frank_exec.G.frontier(state=states.UNEXPLORED)
-                if last_root_prop_depth > 0 and (unexplored[0].depth > last_root_prop_depth + max_prop_depth_diff):
+                if unexplored and last_root_prop_depth > 0 and (unexplored[0].depth > last_root_prop_depth + max_prop_depth_diff):
                     stop_flag = True
                     break
                 if unexplored:
@@ -79,8 +80,7 @@ class Launcher():
                     if propagatedToRoot:
                         last_root_prop_depth = unexplored[0].depth
                         self.cache_and_print_answer(False)
-                        flag = True;
-            
+                        flag = True            
             if not flag:
                 break  
 
@@ -97,33 +97,12 @@ class Launcher():
                 # stop and print any answer found
                 self.cache_and_print_answer(True)
 
-        # while self.frank_exec.nodes_queue:
-        #     # TODO: setup concurrency
-        #     propagatedToRoot = self.frank_exec.run_frank(
-        #         heappop(self.frank_exec.nodes_queue)[1])
-        #     if propagatedToRoot:
-        #         self.cache_and_print_answer(False)
-
-        # else if no answer has been propagated to root and
-        # if not self.frank_exec.answer_propagated_to_root and self.frank_exec.wait_queue:
-        #     # if self.frank_exec.wait_queue:
-        #     while self.frank_exec.wait_queue:
-        #         n = heappop(self.frank_exec.wait_queue)
-        #         self.frank_exec.enqueue_node(n[1], n[2], n[3], n[4])
-        #         # heappush(self.frank_exec.nodes_queue, heappop(self.frank_exec.wait_queue))
-        # elif time.time() - self.frank_exec.last_heartbeat <= self.timeout:
-        #     time.sleep(3)
-
-        # if items to be processed in nodes_queue
-        # if self.frank_exec.nodes_queue:
-        #     self.schedule()
-        # else:
-        #     # stop and print any answer found
-        #     self.cache_and_print_answer(True)
 
     def cache_and_print_answer(self, isFinal=False):
         elapsed_time = time.time() - self.start_time
         answer = 'No answer found'
+        
+
         if self.frank_exec.answer_propagated_to_root:
             latest_root = self.frank_exec.answer_propagated_to_root[-1]
 
@@ -161,15 +140,21 @@ class Launcher():
                        "elapsed_time": f"{round(elapsed_time)}s",
                        "alist": self.frank_exec.answer_propagated_to_root[-1].attributes
                        }
+            
+            self.inference_graphs[self.frank_exec.session_id] = {
+                'graph': self.frank_exec.G, 
+                'intermediate_answer': ans_obj,
+                'answer': ans_obj if isFinal else None,
+            }
 
-            if isFinal:
-                RedisClientPool().get_client().lpush(
-                    self.frank_exec.session_id + ':answer',  json.dumps(ans_obj))
-            else:
-                RedisClientPool().get_client().set(self.frank_exec.session_id +
-                                                   ':partialAnswer',  json.dumps(ans_obj))
-            RedisClientPool().get_client().expire(
-                self.frank_exec.session_id + ':answer', config.config['redis_expire_seconds'])
+            # if isFinal:
+            #     RedisClientPool().get_client().lpush(
+            #         self.frank_exec.session_id + ':answer',  json.dumps(ans_obj))
+            # else:
+            #     RedisClientPool().get_client().set(self.frank_exec.session_id +
+            #                                        ':partialAnswer',  json.dumps(ans_obj))
+            # RedisClientPool().get_client().expire(
+            #     self.frank_exec.session_id + ':answer', config.config['redis_expire_seconds'])
             if isFinal:
                 print(json.dumps(ans_obj, indent=2))
 

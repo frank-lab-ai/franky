@@ -139,8 +139,16 @@ class Test_Graph(unittest.TestCase):
         frontier3 = graph.frontier(state=states.REDUCIBLE)
         self.assertTrue(len(frontier1)==1 and len(frontier2)==1)
 
+    def test_blanket(self):
+        graph = self.create_graph2()
+        blanket = graph.blanket_subgraph('111', ancestor_length=1, descendant_length=1)
+        self.assertTrue(len(blanket.nodes()) == 3)
 
+    def test_ui_graph(self):
+        graph = self.create_graph2()
+        gg = graph.ui_graph()
 
+        self.assertTrue(len(gg['nodes']) > 2)
 
 if __name__ == '__main__':
     unittest.main()
