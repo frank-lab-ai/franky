@@ -41,7 +41,7 @@ class Launcher():
         print(f"session-id: {self.frank_exec.session_id}")
         alist = frank.context.inject_query_context(alist)
         self.frank_exec.enqueue_root(alist)
-        self.schedule()
+        self.schedule(-1)
 
     def start_for_api(self, alist_obj, session_id):
 
@@ -50,12 +50,14 @@ class Launcher():
         t.start()
         return session_id
 
-    def schedule(self):
+    def schedule(self, last_root_prop_depth):
         if time.time() - self.frank_exec.last_heartbeat > self.timeout:
             # stop and print any answer found
             self.cache_and_print_answer(True)
 
         
+        max_prop_depth_diff = 1
+        stop_flag = False
         while True:
             flag = False
             # first check if there are any leaf nodes that can be reduced
@@ -63,31 +65,37 @@ class Launcher():
             if reducible:
                 propagatedToRoot = self.frank_exec.run_frank(reducible[0])
                 if propagatedToRoot:
-                    self.cache_and_print_answer(False)
+                    self.cache_and_print_answer(False)                    
                     flag = True
                 
             if not flag:
                 # check if there are any unexplored leaf nodes
-                unexplored =self.frank_exec.G.frontier(state=states.UNEXPLORED)
+                unexplored = self.frank_exec.G.frontier(state=states.UNEXPLORED)
+                if last_root_prop_depth > 0 and (unexplored[0].depth > last_root_prop_depth + max_prop_depth_diff):
+                    stop_flag = True
+                    break
                 if unexplored:
                     propagatedToRoot = self.frank_exec.run_frank(unexplored[0])
                     if propagatedToRoot:
+                        last_root_prop_depth = unexplored[0].depth
                         self.cache_and_print_answer(False)
                         flag = True;
             
             if not flag:
-                break
-            
+                break  
 
-        # if no answer has been propagated to root and        
-        if time.time() - self.frank_exec.last_heartbeat <= self.timeout:
-            time.sleep(3)
-        
-        if self.frank_exec.G.frontier(update_state=False):
-            self.schedule()
+        if stop_flag:
+            self.cache_and_print_answer(True)   
         else:
-            # stop and print any answer found
-            self.cache_and_print_answer(True)
+            # if no answer has been propagated to root and        
+            if time.time() - self.frank_exec.last_heartbeat <= self.timeout:
+                time.sleep(3)
+            
+            if self.frank_exec.G.frontier(update_state=False):
+                self.schedule(last_root_prop_depth)
+            else:
+                # stop and print any answer found
+                self.cache_and_print_answer(True)
 
         # while self.frank_exec.nodes_queue:
         #     # TODO: setup concurrency
