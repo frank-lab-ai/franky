@@ -54,8 +54,8 @@ class Execute:
         self.trace = ''
         self.session_id = '0'
         self.last_heartbeat = time.time()
-        self.nodes_queue = []
-        self.wait_queue = []
+        # self.nodes_queue = []
+        # self.wait_queue = []
         self.property_refs = {}
         self.reverse_property_refs = {}
         self.graph_nodes = []
@@ -73,9 +73,9 @@ class Execute:
 
     def enqueue_node(self, alist: Alist, parent: Alist, to_be_processed: bool, decomp_rule: str):
         try:
-            if to_be_processed:
-                heappush(self.nodes_queue, (alist.cost, alist,
-                                            parent, to_be_processed, decomp_rule))
+            # if to_be_processed:
+            #     heappush(self.nodes_queue, (alist.cost, alist,
+            #                                 parent, to_be_processed, decomp_rule))
             self.graph_nodes.append(alist)
             if parent is not None:
                 self.graph_edges.append((parent.id, alist.id))
@@ -375,9 +375,9 @@ class Execute:
                 grandchild = self.G.alist(node_id1)
                 self.write_trace(
                     '>>> {}-{}'.format(grandchild.id, str(grandchild)))
-                if grandchild.state != states.EXPLORED:
-                    heappush(self.wait_queue, (grandchild.cost,
-                                               grandchild, child, True, mapOp[1]))
+                # if grandchild.state != states.EXPLORED:
+                #     heappush(self.wait_queue, (grandchild.cost,
+                #                                grandchild, child, True, mapOp[1]))
                 
                 reducibleCtr = 0
                 succ2  = self.G.successors(grandchild.id)
@@ -386,15 +386,15 @@ class Execute:
                     self.write_trace(
                         '>>> {}-{}'.format(ggchild.id, str(ggchild)))
                     if ggchild.state == states.REDUCIBLE:
-                        if reducibleCtr == 0:
-                            heappush(self.nodes_queue, (ggchild.cost,
-                                                        ggchild, grandchild, False, mapOp[1]))
+                    #     if reducibleCtr == 0:
+                    #         heappush(self.nodes_queue, (ggchild.cost,
+                    #                                     ggchild, grandchild, False, mapOp[1]))
                         # self.enqueue_node(ggc, grandchild, False, mapOp[1])
                         self.write_trace_reduced(ggchild)
                         reducibleCtr += 1
-                    elif ggchild.state != states.EXPLORED:
-                        heappush(self.wait_queue, (ggchild.cost,
-                                                    ggchild, grandchild, True, mapOp[1]))
+                    # elif ggchild.state != states.EXPLORED:
+                    #     heappush(self.wait_queue, (ggchild.cost,
+                    #                                 ggchild, grandchild, True, mapOp[1]))
 
             # self.explainer.why(alist, mapOp[1])
             return child
@@ -416,7 +416,8 @@ class Execute:
         
         children = self.G.child_alists(alist.id)
         reducibles = [x for x in children
-                      if x.state == states.REDUCIBLE and x.get(tt.OP).lower() != 'comp']
+                      if (x.state == states.REDUCIBLE or x.state == states.REDUCED) 
+                          and x.get(tt.OP).lower() != 'comp']
         for x in reducibles:
             self.write_trace('  <<< {}-{}'.format(x.id, x))
 
@@ -425,14 +426,18 @@ class Execute:
         if not reducibles or len(unexplored) == len(children):
             return False  # there's nothing to reduce
 
-        reducedAlist = reduce_op.reduce(alist, reducibles)
+        reducedAlist = reduce_op.reduce(alist, reducibles, self.G)
 
         last_heartbeat = time.time()
 
         if reducedAlist is not None:
             for c in children:
                 alist.data_sources = list(set(alist.data_sources + c.data_sources))
+            for r in reducibles:
+                r.state = states.REDUCED
+                self.G.add_alist(r)
             alist.state = states.REDUCIBLE
+
             # these are there for the COMP operation that creates new nodes
             # after reducing
             for n in alist.nodes_to_enqueue_only:
@@ -445,7 +450,7 @@ class Execute:
             # create child nodes
             alist.nodes_to_enqueue_only.clear()
             alist.nodes_to_enqueue_and_process.clear()
-
+            self.G.add_alist(alist)
             # self.explainer.what(alist, True)
             self.write_trace_reduced(alist)
             self.write_trace("reduced:<< {}-{}".format(alist.id, alist))

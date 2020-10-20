@@ -20,9 +20,9 @@ from frank.alist import NodeTypes as nt
 from frank.util import utils
 from frank.uncertainty.aggregateUncertainty import estimate_uncertainty
 from frank.reduce import propagate
+from frank.graph import InferenceGraph
 
-
-def reduce(alist: Alist, children: List[Alist]):
+def reduce(alist: Alist, children: List[Alist], G: InferenceGraph):
     allNumeric = True
     y_predict = None
     X = []

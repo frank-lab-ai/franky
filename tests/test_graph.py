@@ -136,6 +136,7 @@ class Test_Graph(unittest.TestCase):
         graph = self.create_graph2()
         frontier1 = graph.frontier()
         frontier2 = graph.frontier(2)
+        frontier3 = graph.frontier(state=states.REDUCIBLE)
         self.assertTrue(len(frontier1)==1 and len(frontier2)==1)
 
 

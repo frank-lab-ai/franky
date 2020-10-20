@@ -57,13 +57,27 @@ class Launcher():
 
         
         while True:
-            frontier = self.frank_exec.G.frontier()
-            if frontier:
-                propagatedToRoot = self.frank_exec.run_frank(frontier[0])
+            flag = False
+            # first check if there are any leaf nodes that can be reduced
+            reducible = self.frank_exec.G.frontier(state=states.REDUCIBLE, update_state=False)
+            if reducible:
+                propagatedToRoot = self.frank_exec.run_frank(reducible[0])
                 if propagatedToRoot:
                     self.cache_and_print_answer(False)
-            else:
+                    flag = True
+                
+            if not flag:
+                # check if there are any unexplored leaf nodes
+                unexplored =self.frank_exec.G.frontier(state=states.UNEXPLORED)
+                if unexplored:
+                    propagatedToRoot = self.frank_exec.run_frank(unexplored[0])
+                    if propagatedToRoot:
+                        self.cache_and_print_answer(False)
+                        flag = True;
+            
+            if not flag:
                 break
+            
 
         # if no answer has been propagated to root and        
         if time.time() - self.frank_exec.last_heartbeat <= self.timeout:

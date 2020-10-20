@@ -160,7 +160,7 @@ class Alist:
         Returns FALSE if the value of the attribute is a variable
         or an empty string.
         """
-        if attr_name in self.attributes and not str(self.attributes[attr_name]).startswith((VarPrefix.AUXILLIARY, VarPrefix.NESTING, VarPrefix.PROJECTION)):
+        if attr_name in self.attributes and (len(str(self.attributes[attr_name]).strip()) > 0) and not str(self.attributes[attr_name]).startswith((VarPrefix.AUXILLIARY, VarPrefix.NESTING, VarPrefix.PROJECTION)):
             return True
         elif attr_name not in self.attributes or not self.attributes[attr_name]:
             return False
@@ -291,6 +291,7 @@ class States:
     REDUCIBLE = 2
     PRUNED = 3
     EXPLORING = 4
+    REDUCED = 5
 
 
 # branching options

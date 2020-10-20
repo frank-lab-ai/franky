@@ -412,7 +412,7 @@ def part_of_geopolitical_subject(alist: Alist):
     geopolitical_type = alist.get(tt.PROPERTY).split(':')
     for r in find_geopolitical_subelements(alist.get(tt.OBJECT), geopolitical_type[-1]):
         fact_alist = alist.copy()
-        fact_alist.data_sources= list(set(data_alist.data_sources + ['wikidata']))
+        fact_alist.data_sources= list(set(fact_alist.data_sources + ['wikidata']))
         fact_alist.set(tt.SUBJECT, r)
         results.append(fact_alist)
     return results

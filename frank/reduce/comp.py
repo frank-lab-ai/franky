@@ -16,7 +16,7 @@ from frank.util import utils
 from frank.graph import InferenceGraph
 
 
-def reduce(alist: Alist, children: List[Alist], G:InferenceGraph):
+def reduce(alist: Alist, children: List[Alist], G: InferenceGraph):
     if not children:
         return None
 
@@ -28,7 +28,7 @@ def reduce(alist: Alist, children: List[Alist], G:InferenceGraph):
     head, *tail = children
     has_head_children = False
     has_tail_children = False
-    for c in head.children:
+    for c in G.child_alists(head.id):
         has_head_children = True
         if c.get(tt.OP) != 'comp':
             if c.get(tt.OPVAR).startswith(vx.NESTING):
@@ -41,7 +41,7 @@ def reduce(alist: Alist, children: List[Alist], G:InferenceGraph):
 
     for t in tail:
         c_items = set()
-        for tc in t.children:
+        for tc in G.child_alists(t.id):
             has_tail_children = True
             if tc.get(tt.OPVAR).startswith(vx.NESTING):
                 c_items.add(str(c.instantiation_value(tc.get(tt.OPVAR))))
@@ -67,7 +67,7 @@ def reduce(alist: Alist, children: List[Alist], G:InferenceGraph):
         return None
     else:
         # if common items not empty, ignore existing siblings before creating new siblings
-        sibs = G.child_alists(G.parent_alists(alist.id)[0])
+        sibs = G.child_alists(G.parent_alists(alist.id)[0].id)
         for x in sibs:
             if x.id != alist.id:
                 x.prune()
@@ -105,7 +105,7 @@ def reduce(alist: Alist, children: List[Alist], G:InferenceGraph):
                 new_sibling.set(ref, ff)
         # op_alist.link_child(new_sibling)
         new_sibling.node_type = nt.ZNODE
-        G.link(op_alist, new_sibling, 'comp')
+        G.link(op_alist, new_sibling, 'comp_lookup')
         nodes_enqueue_process.append(
             (new_sibling, op_alist, True, 'comp_lookup'))
         print('sibling-child:>>{} {}'.format(new_sibling.id, new_sibling))

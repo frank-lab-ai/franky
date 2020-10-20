@@ -89,19 +89,19 @@ class InferenceGraph(nx.DiGraph):
             self.remove_nodes_from(s[1])
         self.remove_node(alist_id)
 
-    def frontier(self, size=1, update_state=True):
+    def frontier(self, size=1, update_state=True, state=st.UNEXPLORED):
         ''' Get a leaf node that are not in a reducible state '''
         sorted_leaves = self.leaf_alists(sort=True)
         top = []
         for n in sorted_leaves:
-            if n.state == st.UNEXPLORED:
-                n.state = st.EXPLORING
+            if n.state == state:                
                 top.append(n)
             if len(top) >= size:
                 break
         if update_state:
             for t in top:
-                self.add_alist(n)
+                t.state = st.EXPLORING
+                self.add_alist(t)
                 
         return top
         

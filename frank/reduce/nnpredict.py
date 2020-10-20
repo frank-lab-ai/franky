@@ -22,6 +22,7 @@ from frank.alist import NodeTypes as nt
 from frank.util import utils
 from frank.uncertainty.aggregateUncertainty import estimate_uncertainty
 from frank.reduce import propagate
+from frank.graph import InferenceGraph
 
 np.random.seed(20)
 # params
@@ -31,7 +32,7 @@ batch_size = 5
 train_ratio = 0.7
 
 
-def reduce(alist: Alist, children: List[Alist]):
+def reduce(alist: Alist, children: List[Alist], G: InferenceGraph):
     # y_predict = None
     # X = []
     # y = []
