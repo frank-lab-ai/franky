@@ -60,6 +60,14 @@ class Launcher():
         max_prop_depth_diff = 1
         stop_flag = False
         while True:
+            if self.frank_exec.session_id in self.inference_graphs:
+                self.inference_graphs[self.frank_exec.session_id]['graph'] = self.frank_exec.G
+            else:
+                self.inference_graphs[self.frank_exec.session_id] = {
+                    'graph': self.frank_exec.G, 
+                    'intermediate_answer': None,
+                    'answer': None,
+                }
             flag = False
             # first check if there are any leaf nodes that can be reduced
             reducible = self.frank_exec.G.frontier(state=states.REDUCIBLE, update_state=False)

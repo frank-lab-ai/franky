@@ -67,8 +67,19 @@ class InferenceGraph(nx.DiGraph):
         return edges
 
     def ui_graph(self):
-        nodes = [x.attributes for x in self.alists()]
+        nodes = [dict(x.attributes) for x in self.alists()]
+        nodes_arr = []
+        for n in nodes:
+            n.update(n['meta'])
+            n.pop('meta', None)
+            nodes_arr.append(n)
         return {'nodes': nodes, 'edges': self.alists_and_edges()}
+    
+    def cytoscape_ui_graph(self):
+        g = self.ui_graph()
+        nodes = [{"data": y} for y in g['nodes']]
+        edges = [{"data": y} for y in g['edges']]
+        return {'nodes': nodes, 'edges': edges}
         
     def link(self, parent:Alist, child:Alist, edge_label=''):
         if parent:

@@ -11,14 +11,12 @@ from frank.alist import States as states
 from frank.alist import Branching as branching
 from frank.alist import NodeTypes as nt
 from frank import config
-# import frank.cache.neo4j
 from frank.graph import InferenceGraph
 
 
 class Explanation():
 
     def __init__(self):
-        # self.driver = frank.cache.neo4j.get_driver()
         self.ops_text = {'value': 'value', 'max': 'maximum value', 'min': 'minimum value', 'avg': 'average',
                          'mean': 'average', 'mode': 'modal value', 'regress': 'predicted value',
                          'linregress': 'predicted value',
@@ -27,83 +25,9 @@ class Explanation():
                          'nnpredict': 'predicted value', 'comp': 'value',
                          'values': 'values', 'eq': 'equal to', 'gt': 'greater than', 'gte': 'greater than or equal to',
                          'lt': 'less than', 'lte': 'less than or equal to'}
-
-    def get_blanket_nodes(self, tx, sessionId, alistId, blanketLength):
-        alists = {}
-        pendingParentIds = {}
-        results = tx.run(f"OPTIONAL MATCH p=(n:Alist {{sessionId:'{sessionId}', id:'{alistId}' }})<-[*1..{blanketLength}]-(a) "
-                         f"OPTIONAL MATCH q=(m:Alist {{sessionId:'{sessionId}', id:'{alistId}' }})-[*1..{blanketLength}]->(b)"
-                         f"WITH *, relationships(p) as rp, relationships(q) as rq "
-                         f"RETURN m,n,a,b,rp,rq")
-        for node in results:
-            relationships = []
-            if node[4]:
-                relationships.extend(node[4])
-            if node[5]:
-                relationships.extend(node[5])
-            for rel in relationships:
-                if rel.start_node._properties['id'] not in alists:
-                    from_node = self.createAlistFromNodePropreties(
-                        alists, rel.start_node._properties, rel, pendingParentIds)
-                    alists[from_node.id] = from_node
-                if rel.end_node._properties['id'] not in alists:
-                    to_node = self.createAlistFromNodePropreties(
-                        alists, rel.end_node._properties, rel, pendingParentIds)
-                    alists[to_node.id] = to_node
-
-        return list(alists.values())
-
-    def read_blanket_nodes(self, sessionId, alistId=0, blanketLength=1):
-        with self.driver.session() as session:
-            return session.read_transaction(self.get_blanket_nodes, sessionId, alistId, blanketLength)
-
-    def createAlistFromNodePropreties(self, alists, props, rel, pendingParentIds):
-        if props['id'] in alists:
-            alist = alists[props['id']]
-        else:
-            alist = Alist(**props)
-            if props[tt.OPVAR] in props:
-                alist.set(props[tt.OPVAR], props[props[tt.OPVAR]])
-            alist.id = props['id']
-            alist.data_sources = set(props['src'].split(','))
-            if 'ntype' in props:
-                alist.node_type = props['ntype']
-            if 'nstate' in props:
-                alist.state = props['nstate']
-
-        if rel.end_node._properties['id'] == props['id'] and alist.parent_decomposition.strip() == '':
-            alist.parent_decomposition = str(rel.type).lower()
-        if rel.end_node._properties['id'] in alists and \
-           alists[rel.end_node._properties['id']].parent_decomposition.strip() == '':
-            alists[rel.end_node._properties['id']
-                   ].parent_decomposition = str(rel.type).lower()
-
-        # add parents and children to alists
-        if props['parentId'] in alists:
-            parentAlist = alists[props['parentId']]
-            alist.parent.append(parentAlist)
-            parentAlist.children.append(alist)
-            alists[props['parentId']] = parentAlist
-        else:
-            if props['parentId'] in pendingParentIds:
-                pendingParentIds[props['parentId']] = pendingParentIds[props['parentId']].append(
-                    alist.id)
-            else:
-                pendingParentIds[props['parentId']] = [alist.id]
-
-        # check if this alist is in the pending parentIds and link parent and child.
-        if alist.id in list(pendingParentIds):
-            for childId in pendingParentIds[alist.id]:
-                child = alists[childId]
-                child.parent.append(alist)
-                alist.children.append(child)
-
-        return alist
-
+  
     def generateExplanation(self, G:InferenceGraph, node_id, descendant_blanket_length=1, ancestor_blanket_length=1):
-        ''' Generate explanation of a node given its blanket
-
-        '''
+        ''' Generate explanation of a node given its blanket'''
 
         '''
         Saliency ordering: Some decompositions and aggregation operations are not important given their distance
@@ -146,8 +70,6 @@ class Explanation():
         n_star: Alist = G.alist(node_id)
         if not n_star:
             return ''
-        # n_star = n_star[0]
-
         ancestors = self.ancestor_explanation(G,
             n_star, "", int(ancestor_blanket_length), 1).strip()
         descendants = self.descendant_explanation(G,
@@ -163,7 +85,7 @@ class Explanation():
         }
         return explanation
 
-    def summarizeChildren(self, alist: Alist, summary, max_distance, distance):
+    # def summarizeChildren(self, alist: Alist, summary, max_distance, distance):
         if max_distance < distance:
             return ''
 
@@ -246,42 +168,42 @@ class Explanation():
 
         return summary
 
-    def summarizeParents(self, alist: Alist, summary, max_distance, distance):
+    # def summarizeParents(self, alist: Alist, summary, max_distance, distance):
 
-        if distance <= max_distance:
+    #     if distance <= max_distance:
 
-            for parent in alist.parent:
-                time = f" in {parent.get(tt.TIME)}" if parent.get(
-                    tt.TIME) else ""
+    #         for parent in alist.parent:
+    #             time = f" in {parent.get(tt.TIME)}" if parent.get(
+    #                 tt.TIME) else ""
 
-                if alist.parent_decomposition.lower() == 'temporal':
-                    if alist.get(tt.OP).lower() == 'regress':
-                        summary = f" Had to predict the {parent.get(tt.PROPERTY)} of {parent.instantiation_value(tt.SUBJECT)}{time} " + \
-                            f"since the required {parent.get(tt.PROPERTY)} value was not found " + \
-                            f"in the knowledge bases searched.{summary}"
-                    else:
-                        summary += f" Tried to find the {parent.get(tt.PROPERTY)} of {parent.instantiation_value(tt.SUBJECT)} " + \
-                            f"in other times from which to extrapolate."
-                elif alist.parent_decomposition.lower() == 'geospatial':
-                    summary += f" The {parent.get(tt.PROPERTY)} of {parent.instantiation_value(tt.SUBJECT)}{time} was not found " + \
-                        f"so we had find the {parent.get(tt.PROPERTY)} for its constituents.{summary}"
-                elif alist.parent_decomposition.lower() == 'comparison':
-                    summary += f" Had to solve for the values of the items to be compared."
-                else:
-                    if parent.get(tt.OP).lower() in ['eq', 'lt', 'gt']:
-                        summary += f" Had to decompose the query in order to determine if the first sub-query " + \
-                            f"is {self.ops_text[parent.get(tt.OP)]} the second.{summary}"
-                    elif parent.get(tt.OP).lower() in ['min', 'max', 'avg', 'mode', 'mean']:
-                        summary += f" The required {self.ops_text[parent.get(tt.OP)]} of the {parent.get(tt.PROPERTY)}{time} " + \
-                            f"was not found in the knowledge bases searched.{summary}"
-                    else:
-                        summary += f" The {self.ops_text[parent.get(tt.OP)]} of the {parent.get(tt.PROPERTY)} of {parent.instantiation_value(tt.SUBJECT)}{time} " + \
-                            f"was not found in the knowledge bases searched.{summary}"
-                summary = self.summarizeParents(
-                    parent, summary, max_distance, distance+1)
-        return summary
+    #             if alist.parent_decomposition.lower() == 'temporal':
+    #                 if alist.get(tt.OP).lower() == 'regress':
+    #                     summary = f" Had to predict the {parent.get(tt.PROPERTY)} of {parent.instantiation_value(tt.SUBJECT)}{time} " + \
+    #                         f"since the required {parent.get(tt.PROPERTY)} value was not found " + \
+    #                         f"in the knowledge bases searched.{summary}"
+    #                 else:
+    #                     summary += f" Tried to find the {parent.get(tt.PROPERTY)} of {parent.instantiation_value(tt.SUBJECT)} " + \
+    #                         f"in other times from which to extrapolate."
+    #             elif alist.parent_decomposition.lower() == 'geospatial':
+    #                 summary += f" The {parent.get(tt.PROPERTY)} of {parent.instantiation_value(tt.SUBJECT)}{time} was not found " + \
+    #                     f"so we had find the {parent.get(tt.PROPERTY)} for its constituents.{summary}"
+    #             elif alist.parent_decomposition.lower() == 'comparison':
+    #                 summary += f" Had to solve for the values of the items to be compared."
+    #             else:
+    #                 if parent.get(tt.OP).lower() in ['eq', 'lt', 'gt']:
+    #                     summary += f" Had to decompose the query in order to determine if the first sub-query " + \
+    #                         f"is {self.ops_text[parent.get(tt.OP)]} the second.{summary}"
+    #                 elif parent.get(tt.OP).lower() in ['min', 'max', 'avg', 'mode', 'mean']:
+    #                     summary += f" The required {self.ops_text[parent.get(tt.OP)]} of the {parent.get(tt.PROPERTY)}{time} " + \
+    #                         f"was not found in the knowledge bases searched.{summary}"
+    #                 else:
+    #                     summary += f" The {self.ops_text[parent.get(tt.OP)]} of the {parent.get(tt.PROPERTY)} of {parent.instantiation_value(tt.SUBJECT)}{time} " + \
+    #                         f"was not found in the knowledge bases searched.{summary}"
+    #             summary = self.summarizeParents(
+    #                 parent, summary, max_distance, distance+1)
+    #     return summary
 
-    def summarizeNode(self, alist: Alist, in_place=True):
+    # def summarizeNode(self, alist: Alist, in_place=True):
         ''' generate explanation for node, assign to alist attribute in place and return the explanation'''
         summary = ''
         try:
@@ -354,10 +276,6 @@ class Explanation():
             # * explain any subqueries set comps in children nodes
             time = "" if alist.get(
                 tt.TIME) == '' else "in " + alist.get(tt.TIME)
-
-            # for c in filter(lambda x: x.state == states.REDUCIBLE, alist.children):
-            #     if c.get(tt.OP).lower() != "value" and c.get(tt.EXPLAIN).strip() not in reduce_exp:
-            #         reduce_exp += " " + c.get(tt.EXPLAIN)
 
             opDesc = ""
             if alist.get(tt.OP).lower() not in ["value", "values", "comp", "regress", "nnpredict", "gt", "gte", "lt", "lte", "eq"]:

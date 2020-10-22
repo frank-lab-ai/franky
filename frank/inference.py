@@ -286,9 +286,11 @@ class Execute:
                     ff.set(tt.PROPERTY,
                            self.reverse_property_refs[ff.get(tt.PROPERTY)])
                 # alist.link_child(ff)
-                self.G.link(alist, ff,alist.parent_decomposition)
-                alist.parent_decomposition = "Lookup"
+                
+                alist.parent_decomposition = "Lookup"                
                 self.enqueue_node(ff, alist, False, 'Lookup')
+                self.G.link(alist, ff,alist.parent_decomposition)
+
                 # self.add_reduced_alist_to_redis(ff) # leaf node from retrieved
                 # fact is considered reduced
                 self.write_trace(' found:>>> {}'.format(str(ff)))
@@ -384,7 +386,7 @@ class Execute:
             for r in reducibles:
                 r.state = states.REDUCED
                 self.G.add_alist(r)
-            alist.state = states.REDUCIBLE
+            alist.state = states.REDUCIBLE #check later
 
             # these are there for the COMP operation that creates new nodes
             # after reducing

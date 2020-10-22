@@ -41,9 +41,9 @@ def getAnswer(sessionid):
     graph={'nodes':[], 'edges':[]}
     partial_answer = None
     answer = None
-    trace = None
+    trace = []
     if sessionid in inference_graphs:
-        graph = inference_graphs[sessionid]['graph'].ui_graph()
+        graph = inference_graphs[sessionid]['graph'].cytoscape_ui_graph()
         partial_answer = inference_graphs[sessionid]['intermediate_answer']
         answer = inference_graphs[sessionid]['answer']
 

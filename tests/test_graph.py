@@ -149,6 +149,12 @@ class Test_Graph(unittest.TestCase):
         gg = graph.ui_graph()
 
         self.assertTrue(len(gg['nodes']) > 2)
+    
+    def test_cytoscape_ui_graph(self):
+        graph = self.create_graph2()
+        gg = graph.cytoscape_ui_graph()
+
+        self.assertTrue(len(gg['nodes']) > 2)
 
 if __name__ == '__main__':
     unittest.main()
