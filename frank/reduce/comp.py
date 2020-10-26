@@ -70,7 +70,8 @@ def reduce(alist: Alist, children: List[Alist], G: InferenceGraph):
         sibs = G.child_alists(G.parent_alists(alist.id)[0].id)
         for x in sibs:
             if x.id != alist.id:
-                x.prune()
+                # x.prune()
+                G.prune(x.id)
                 print('sibling pruned:>>{} {}'.format(x.id, x))
 
     # setup new sibling branch(s)

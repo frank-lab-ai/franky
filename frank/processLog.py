@@ -1,5 +1,5 @@
 
-# Logging of FRANK execution
+# Logging of FRANK Inference
 
 
 class LogLevel:

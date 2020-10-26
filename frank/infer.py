@@ -9,10 +9,8 @@ import datetime
 import random
 import threading
 import time
-from heapq import heappop, heappush
 
 import frank.cache.logger as clogger
-# import frank.cache.neo4j
 import frank.map.map_wrapper
 import frank.processLog
 import frank.reduce.comp
@@ -47,64 +45,87 @@ import frank.context
 from frank.graph import InferenceGraph
 
 
-class Execute:
+class Infer:    
+    """ 
+    Resolve alists by infer projection variables in alist
+
+    Attributes
+    ----------
+    G: InferenceGraph
+        
+    session_id : str
+
+    last_heartbeat : time
+        The last time an inference activity happened to 
+        determine when to time-out.
+
+    property_refs : dict
+        Reference to properties in knowledge bases that match predicate in query.
+
+    reverse_property_ref s: dict
+        Inverse references to properties in knowledge bases that match predicate in query.
+
+    max_depth: int
+        The current maximum depth in the inference graph from the root node.
+
+    propagated_alists : list
+        List of root node alists resolved after successful propagation 
+        of variables from leaf nodes.
+
+    root : Alist
+        Alist in the root node of inference graph.
+
+    explainer: Explanation
+        An object to generate explanations.     
+    
+    """
 
     def __init__(self, G:InferenceGraph):
+        """
+        Parameters
+        ----------
+        G : InferenceGraph
+        """
         self.G = G
-        self.trace = ''
         self.session_id = '0'
         self.last_heartbeat = time.time()
-        # self.nodes_queue = []
-        # self.wait_queue = []
         self.property_refs = {}
         self.reverse_property_refs = {}
-        self.graph_nodes = []
-        self.graph_edges = []
-        self.has_temp_answer = False
-        self.max_depth_process_so_far = 0
-        self.answer_propagated_to_root = []
+        self.max_depth = 0
+        self.propagated_alists = []
         self.root = None
         self.explainer = Explanation()
 
     def enqueue_root(self, alist):
+        """ Add alist as the root node of the inference graph"""
         self.root = alist
-        self.enqueue_node(alist, None, True, '')
         self.G.add_alist(alist)
 
-    def enqueue_node(self, alist: Alist, parent: Alist, to_be_processed: bool, decomp_rule: str):
-        # try:
-        #     # if to_be_processed:
-        #     #     heappush(self.nodes_queue, (alist.cost, alist,
-        #     #                                 parent, to_be_processed, decomp_rule))
-        #     self.graph_nodes.append(alist)
-        #     if parent is not None:
-        #         self.graph_edges.append((parent.id, alist.id))
-        #     # # update the trace store
-        #     # clogger.Logging().log(
-        #     #     (clogger.REDIS, 'lpush', True, self.session_id + ':graphNodes', str(alist)))
-        #     # if parent:
-        #     #     clogger.Logging().log(('redis', 'lpush', True,
-        #     #                            self.session_id +
-        #     #                            ':graphEdges', str(alist),
-        #     #                            '{{"source":"{}", "target":"{}" }}'.format(parent.id, alist.id)))
-        #     # self.write_graph(alist, parent=parent, edge=decomp_rule)
-        #     # self.G.link(parent, alist, decomp_rule)
-        # except Exception:
-        #     print("Exception occurred when adding node to queue")
-        pass
 
     def run_frank(self, alist: Alist):
-        '''
-        For the given alist, attempt to instantiate projection variable
-        If instantiation is successful, attempt to reduce
+        """ Run the FRANK algorithm for an alist
+
+        Args
+        ----
+        alist : Alist
+
+        Return
+        ------
+        Return True if the instantiation of the project variable of an alist 
+        is propagated to the root node.
+
+        Notes
+        -----
+        For the given alist, attempt to instantiate projection 
+        variable. If instantiation is successful, attempt to reduce
         Else decompose and add new children to queue
-        '''
+        """
         self.last_heartbeat = time.time()
-        propagated_to_root = False
-        self.max_depth_process_so_far = alist.depth
+        curr_propagated_alists = []
+        self.max_depth = alist.depth
         if alist.state is states.PRUNED:
             self.write_trace("ignore pruned:>> {}-{}".format(alist.id, alist))
-            return propagated_to_root
+            return propagated_alists
 
         bool_result = False
         proj_vars = alist.projection_variables()
@@ -132,6 +153,7 @@ class Execute:
         # search kb for the variable instantiation
 
         if bool_result:
+            is_propagated = False
             if alist.state != states.REDUCIBLE:  # if in reducible state, don't change
                 alist.state = states.EXPLORED
                 self.G.add_alist(alist)
@@ -139,24 +161,36 @@ class Execute:
                 alist.state = states.REDUCIBLE
                 self.G.add_alist(alist)
             if self.G.child_ids(alist.id):
-                propagated_to_root = self.propagate(self.G.child_ids(alist.id)[0])
+                is_propagated = self.propagate(self.G.child_ids(alist.id)[0])
             else:
-                propagated_to_root = self.propagate(
+                is_propagated = self.propagate(
                     self.G.child_ids(self.G.parent_ids(alist.id)[0])[0])
 
-            if propagated_to_root:
+            if is_propagated:
                 prop_alist = self.G.alist(self.root.id)
                 self.write_trace("intermediate ans:>> {}-{}".format(
                     prop_alist.id, prop_alist), loglevel=processLog.LogLevel.ANSWER)
-                self.answer_propagated_to_root.append(prop_alist.copy())
+                curr_propagated_alists.append(prop_alist.copy())
+                self.propagated_alists.append(prop_alist.copy())
         else:
             alist.state = states.EXPLORED
             self.G.add_alist(alist)
             for mapOp in self.get_map_strategy(alist):
                 self.decompose(alist, mapOp)
-        return propagated_to_root
+        return curr_propagated_alists
 
     def search_kb(self, alist: Alist):
+        """ Search knowledge bases to instantiate variables in alist.
+        
+        Args
+        ----
+        alist: Alist
+
+        Return
+        ------
+        Returns `True` if variable instantiation is successful from a KB search.
+        
+        """
         self.last_heartbeat = time.time()
         self.write_trace("search:>>{} {}".format(alist.id, alist))
         if alist.state == states.EXPLORED:
@@ -288,8 +322,9 @@ class Execute:
                 # alist.link_child(ff)
                 
                 alist.parent_decomposition = "Lookup"                
-                self.enqueue_node(ff, alist, False, 'Lookup')
-                self.G.link(alist, ff,alist.parent_decomposition)
+                # self.enqueue_node(ff, alist, False, 'Lookup')
+                self.G.add_alist(alist)
+                self.G.link(alist, ff, alist.parent_decomposition)
 
                 # self.add_reduced_alist_to_redis(ff) # leaf node from retrieved
                 # fact is considered reduced
@@ -297,6 +332,17 @@ class Execute:
         return len(found_facts) > 0
 
     def get_map_strategy(self, alist: Alist):
+        """ Get decomposition rules to apply to an alist
+        
+        Args
+        ----
+        alist : Alist
+
+        Return
+        ------
+        ops : A list of reduce functions for aggregating alists
+
+        """
         # TODO: learn to predict best strategy given path of root from
         # node and attributes in alist
         self.last_heartbeat = time.time()
@@ -316,7 +362,38 @@ class Execute:
             random.shuffle(ops)
             return ops
 
-    def decompose(self, alist: Alist, mapOp):
+    def decompose(self, alist: Alist, map_op):
+        """ Apply a decomposition rule to create successors of an alist
+
+        Args
+        ----
+        alist : Alist to decompose
+
+        map_op : str
+            Name of the map operation to apply to the alist
+
+        Return
+        ------
+        alist: Alist
+            Successor h-node alist that has z-node child alists
+        
+        Notes
+        -----
+        z-nodes are alists that represent facts and contain variables that 
+        are to be instantiated with data from knowledge bases.
+        h-nodes are alists that have operations to aggregate their child z-nodes.
+        Decompositions create z-node and specify the `h` operations for aggregating 
+        the decomposed child nodes.
+
+                    (alist)
+                       |
+                       |
+                    (h-node)
+                    / ... \\
+                   /  ...  \\   
+            (z-node1) ... (z-nodeN)
+
+        """
         self.last_heartbeat = time.time()
         if alist.depth + 1 > config.config['max_depth']:
             print('max depth reached!\n')
@@ -324,9 +401,9 @@ class Execute:
             return alist
 
         self.write_trace('T{thread} > {op}:{id}-{alist}'.format(
-            thread=threading.get_ident(), op=mapOp[1], alist=alist, id=alist.id))
+            thread=threading.get_ident(), op=map_op[1], alist=alist, id=alist.id))
         alist.branchType = br.OR
-        child = mapOp[0](alist, self.G)
+        child = map_op[0](alist, self.G)
         # check for query context
         context = alist.get(tt.CONTEXT)
         self.last_heartbeat = time.time()
@@ -346,12 +423,30 @@ class Execute:
                         self.G.add_alist(ggchild)
                         reducibleCtr += 1
             # generate the WHY explanation
-            self.explainer.why(self.G, alist, mapOp[1])
+            self.explainer.why(self.G, alist, map_op[1])
             return child
         else:
             return None
 
     def aggregate(self, alist_id):
+        """ Aggregate the child nodes of an alist by applying the operation 
+            specified by the *`h`* attribute of the node's alist.
+
+        Args
+        ----
+        alist_id : str
+            Id of alist whose child nodes should be aggregated
+        
+        Return
+        --------
+        Returns True if aggregation was successful.  
+
+        Notes
+        -----
+        Only child alists that are in the `reduced` or `reducible` states are aggregated.
+        The result of the aggregation is stored in the alist and the inference graph is updated.
+        Text explaining the aggregation is also added to the `xp` attribute of the alist.
+        """
         alist = self.G.alist(alist_id)
         self.last_heartbeat = time.time()
         self.write_trace('reducing:>><< {}-{}'.format(alist.id, alist))
@@ -390,16 +485,16 @@ class Execute:
 
             # these are there for the COMP operation that creates new nodes
             # after reducing
-            for n in alist.nodes_to_enqueue_only:
-                self.enqueue_node(n[0], n[1], n[2], n[3])
+            # for n in alist.nodes_to_enqueue_only:
+            #     self.enqueue_node(n[0], n[1], n[2], n[3])
             # in a reducer generated new node, then they MUST be processed immediately,
             # so place in nodesQueue, not waitQueue
-            for n in alist.nodes_to_enqueue_and_process:
-                self.enqueue_node(n[0], n[1], n[2], n[3])
+            # for n in alist.nodes_to_enqueue_and_process:
+            #     self.enqueue_node(n[0], n[1], n[2], n[3])
             # clear nodes to enqueue to prevent reuse if node is cloned to
             # create child nodes
-            alist.nodes_to_enqueue_only.clear()
-            alist.nodes_to_enqueue_and_process.clear()
+            # alist.nodes_to_enqueue_only.clear()
+            # alist.nodes_to_enqueue_and_process.clear()
             self.G.add_alist(alist)
             self.explainer.what(self.G, alist, True)
             self.write_trace("reduced:<< {}-{}".format(alist.id, alist))
@@ -415,11 +510,9 @@ class Execute:
         self.write_trace('^^ {}-{}'.format(curr_alist.id, curr_alist))
         try:
             while self.G.parent_ids(curr_alist.id):
-                # get the parent alist and apply its reduce operation to its
-                # children
+                # get parent alist and apply its reduce operation to its successors
                 if self.aggregate(self.G.parent_ids(curr_alist.id)[0]):
-                    # set the parent to the current alist and recurse up the
-                    # tree
+                    # set the parent to the current alist and recurse 
                     curr_alist = self.G.parent_alists(curr_alist.id)[0]
                 else:
                     return False

@@ -1,13 +1,13 @@
 import unittest
 from frank.alist import Alist
 from frank.alist import Attributes as tt, States as states
-from frank.inference import Execute
+from frank.infer import Infer
 
 
 class Test_FrankCore(unittest.TestCase):
 
     def setUp(self):
-        self.exec = Execute()
+        self.infer = Infer()
         self.alist = Alist(**{tt.ID: '1', tt.SUBJECT: 'Ghana', tt.PROPERTY: 'P1082',
                               tt.OBJECT: '?x', tt.TIME: '2010', tt.OPVAR: '?x', tt.COST: 1})
 
@@ -39,11 +39,11 @@ class Test_FrankCore(unittest.TestCase):
     def test_inference(self):
         alist = Alist(**{tt.ID: '1', tt.SUBJECT: 'Ghana', tt.PROPERTY: 'population',
                          tt.OBJECT: '', tt.TIME: '2010', tt.OPVAR: '?x', tt.COST: 1})
-        # exec = Execute().runFrank(alist)
+        # infer = Infer().runFrank(alist)
         self.assertTrue(True)
 
     def test_aggregate(self):
-        res = self.exec.aggregate(self.alist)
+        res = self.infer.aggregate(self.alist)
         self.assertTrue(res)
 
 

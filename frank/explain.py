@@ -386,12 +386,16 @@ class Explanation():
                           f"{self.ops_text[alist.get(tt.OP)]} {alist.instantiation_value(vars_compared[1])}."
             elif alist.get(tt.OP) in ['comp']:
                 listed_str = ''
+
                 listed = alist.instantiation_value(
-                    alist.get(tt.OPVAR)).split(',')
-                if len(listed) > 8:
-                    listed_str += f"{', '.join(listed[0:8])}, etc"
-                else:
-                    listed_str += ', '.join(listed)
+                    alist.get(tt.OPVAR))
+                if listed:
+                    listed = listed.split(',')
+                    if len(listed) > 8:
+                        listed_str += f"{', '.join(listed[0:8])}, etc"
+                    else:
+                        listed_str += ', '.join(listed)
+
                 if listed_str:
                     what = f"Solved the sub-query and found the following values: {listed_str}."
             else:

@@ -5,13 +5,11 @@ Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
 
 '''
 import time
-import threading
 import timeit
 import uuid
 import json
 import threading
-from heapq import heappush, heappop
-from frank.inference import Execute
+from frank.infer import Infer
 
 from frank.alist import Alist
 from frank.alist import Attributes as tt
@@ -20,29 +18,27 @@ from frank.alist import Branching as branching
 from frank import config
 from frank.util import utils
 from frank.graph import InferenceGraph
-
-# from frank.cache.redis import RedisClientPool
 import frank.context
 
 class Launcher():
 
     def __init__(self, **kwargs):
-        self.frank_exec: Execute = None
+        self.frank_infer: Infer = None
         self.timeout = 60  # self.timeout in seconds
         self.start_time = time.time()
         self.inference_graphs = {}
 
     def start(self, alist: Alist, session_id, inference_graphs):
-        ''' Create new inference graph and execute'''
+        ''' Create new inference graph and infer'''
         G = InferenceGraph()
-        self.frank_exec = Execute(G)
-        self.frank_exec.session_id = session_id
+        self.frank_infer = Infer(G)
+        self.frank_infer.session_id = session_id
         self.inference_graphs = inference_graphs
         self.start_time = time.time()
-        self.frank_exec.last_heartbeat = time.time()
-        print(f"session-id: {self.frank_exec.session_id}")
+        self.frank_infer.last_heartbeat = time.time()
+        print(f"session-id: {self.frank_infer.session_id}")
         alist = frank.context.inject_query_context(alist)
-        self.frank_exec.enqueue_root(alist)
+        self.frank_infer.enqueue_root(alist)
         self.schedule(-1)
 
     def start_for_api(self, alist_obj, session_id, inference_graphs):
@@ -53,38 +49,38 @@ class Launcher():
         return session_id
 
     def schedule(self, last_root_prop_depth):
-        if time.time() - self.frank_exec.last_heartbeat > self.timeout:
+        if time.time() - self.frank_infer.last_heartbeat > self.timeout:
             # stop and print any answer found
             self.cache_and_print_answer(True)
         
         max_prop_depth_diff = 1
         stop_flag = False
         while True:
-            if self.frank_exec.session_id in self.inference_graphs:
-                self.inference_graphs[self.frank_exec.session_id]['graph'] = self.frank_exec.G
+            if self.frank_infer.session_id in self.inference_graphs:
+                self.inference_graphs[self.frank_infer.session_id]['graph'] = self.frank_infer.G
             else:
-                self.inference_graphs[self.frank_exec.session_id] = {
-                    'graph': self.frank_exec.G, 
+                self.inference_graphs[self.frank_infer.session_id] = {
+                    'graph': self.frank_infer.G, 
                     'intermediate_answer': None,
                     'answer': None,
                 }
             flag = False
             # first check if there are any leaf nodes that can be reduced
-            reducible = self.frank_exec.G.frontier(state=states.REDUCIBLE, update_state=False)
+            reducible = self.frank_infer.G.frontier(state=states.REDUCIBLE, update_state=False)
             if reducible:
-                propagatedToRoot = self.frank_exec.run_frank(reducible[0])
+                propagatedToRoot = self.frank_infer.run_frank(reducible[0])
                 if propagatedToRoot:
                     self.cache_and_print_answer(False)                    
                     flag = True
                 
             if not flag:
                 # check if there are any unexplored leaf nodes
-                unexplored = self.frank_exec.G.frontier(state=states.UNEXPLORED)
+                unexplored = self.frank_infer.G.frontier(state=states.UNEXPLORED)
                 if unexplored and last_root_prop_depth > 0 and (unexplored[0].depth > last_root_prop_depth + max_prop_depth_diff):
                     stop_flag = True
                     break
                 if unexplored:
-                    propagatedToRoot = self.frank_exec.run_frank(unexplored[0])
+                    propagatedToRoot = self.frank_infer.run_frank(unexplored[0])
                     if propagatedToRoot:
                         last_root_prop_depth = unexplored[0].depth
                         self.cache_and_print_answer(False)
@@ -96,10 +92,10 @@ class Launcher():
             self.cache_and_print_answer(True)   
         else:
             # if no answer has been propagated to root and        
-            if time.time() - self.frank_exec.last_heartbeat <= self.timeout:
+            if time.time() - self.frank_infer.last_heartbeat <= self.timeout:
                 time.sleep(3)
             
-            if self.frank_exec.G.frontier(update_state=False):
+            if self.frank_infer.G.frontier(update_state=False):
                 self.schedule(last_root_prop_depth)
             else:
                 # stop and print any answer found
@@ -111,8 +107,8 @@ class Launcher():
         answer = 'No answer found'
         
 
-        if self.frank_exec.answer_propagated_to_root:
-            latest_root = self.frank_exec.answer_propagated_to_root[-1]
+        if self.frank_infer.propagated_alists:
+            latest_root = self.frank_infer.propagated_alists[-1]
 
             # get projection variables from the alist
             # only one projection variable can be used as an alist
@@ -146,23 +142,23 @@ class Launcher():
                        "error_bar": f"{errorbar_sigdig}",
                        "sources": f"{','.join(list(latest_root.data_sources))}",
                        "elapsed_time": f"{round(elapsed_time)}s",
-                       "alist": self.frank_exec.answer_propagated_to_root[-1].attributes
+                       "alist": self.frank_infer.propagated_alists[-1].attributes
                        }
             
-            self.inference_graphs[self.frank_exec.session_id] = {
-                'graph': self.frank_exec.G, 
+            self.inference_graphs[self.frank_infer.session_id] = {
+                'graph': self.frank_infer.G, 
                 'intermediate_answer': ans_obj,
                 'answer': ans_obj if isFinal else None,
             }
 
             # if isFinal:
             #     RedisClientPool().get_client().lpush(
-            #         self.frank_exec.session_id + ':answer',  json.dumps(ans_obj))
+            #         self.frank_infer.session_id + ':answer',  json.dumps(ans_obj))
             # else:
-            #     RedisClientPool().get_client().set(self.frank_exec.session_id +
+            #     RedisClientPool().get_client().set(self.frank_infer.session_id +
             #                                        ':partialAnswer',  json.dumps(ans_obj))
             # RedisClientPool().get_client().expire(
-            #     self.frank_exec.session_id + ':answer', config.config['redis_expire_seconds'])
+            #     self.frank_infer.session_id + ':answer', config.config['redis_expire_seconds'])
             if isFinal:
                 print(json.dumps(ans_obj, indent=2))
 
