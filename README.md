@@ -1,5 +1,7 @@
 # FRANK
-Frank is a question answering framework that combines multiple forms of reasoning, including deductive, statistical and arithmetic to answer question.
+**_Functional Reasoning for Acquiring Novel Knowledge_**
+
+FRANK is a question answering framework that combines multiple forms of reasoning, including deductive, statistical and arithmetic to answer questions.
 
 
 # Demo
@@ -21,6 +23,7 @@ While running FRANK locally, we advice that you set up the database endpoints to
 
 `TODO:` Instructions for installing DBs locally will be added soon.
 
+# Running FRANK
 ## Launching the API
 
 The FRANK API can be launched from the terminal with the command:
@@ -29,7 +32,7 @@ The FRANK API can be launched from the terminal with the command:
 python frank_api.py
 ```
 
-# Launching the UI
+## Launching the UI
 
 The UI is a Javascript application built with `React` on `NodeJS`.
 From within the UI source root directory, run this command in the terminal:
@@ -37,6 +40,15 @@ From within the UI source root directory, run this command in the terminal:
 ```
 npm start
 ```
+
+## Using FRANK in the CLI
+
+FRANK can be used as a CLI application.
+
+```
+python frank_cli.py
+```
+
 
 # Reference Papers
 Here are links to our academic papers on FRANK. Please reference these papers when you use or extend FRANK.
