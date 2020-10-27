@@ -36,8 +36,7 @@ class Launcher():
         self.frank_infer.session_id = session_id
         self.inference_graphs = inference_graphs
         self.start_time = time.time()
-        self.frank_infer.last_heartbeat = time.time()
-        print(f"session-id: {self.frank_infer.session_id}")
+        self.frank_infer.last_heartbeat = time.time()        
         alist = frank.context.inject_query_context(alist)
         self.frank_infer.enqueue_root(alist)
         self.schedule(-1)

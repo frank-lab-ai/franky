@@ -125,7 +125,7 @@ class Infer:
         curr_propagated_alists = []
         self.max_depth = alist.depth
         if alist.state is states.PRUNED:
-            self.write_trace("ignore pruned:>> {}-{}".format(alist.id, alist))
+            self.write_trace(f"{pcol.RED}ignore pruned:>> {alist.id}{pcol.RESET}-{alist}{pcol.RESETALL}")
             return propagated_alists
 
         bool_result = False
@@ -170,7 +170,7 @@ class Infer:
             if is_propagated:
                 prop_alist = self.G.alist(self.root.id)
                 self.write_trace(f"{pcol.CYAN}intermediate ans:>> " \
-                                 f"{prop_alist.id}{pcol.RESET}-{prop_alist}", 
+                                 f"{prop_alist.id}{pcol.RESET}-{prop_alist}{pcol.RESETALL}", 
                     loglevel=processLog.LogLevel.ANSWER)
                 curr_propagated_alists.append(prop_alist.copy())
                 self.propagated_alists.append(prop_alist.copy())
@@ -194,7 +194,7 @@ class Infer:
         
         """
         self.last_heartbeat = time.time()
-        self.write_trace(f"{pcol.MAGENTA}search:>> {alist.id}{pcol.RESET} {alist}")
+        self.write_trace(f"{pcol.MAGENTA}search:>> {alist.id}{pcol.RESET} {alist}{pcol.RESETALL}")
         if alist.state == states.EXPLORED:
             new_alist = alist.copy()
             new_alist.state = states.EXPLORED
@@ -266,7 +266,7 @@ class Infer:
                     #                                                         search_attributes=searchable_attr)
                     if cache_found_flag == True:
                         found_facts.append(results[0])
-                        self.write_trace(f'{pcol.MAGENTA}found:>>> cache{pcol.RESET}')
+                        self.write_trace(f'{pcol.MAGENTA}found:>>> cache{pcol.RESETALL}')
                 # if not found_facts:
                 #     self.write_trace('found:>>> cache')
             if not cache_found_flag and prop_string in self.property_refs:
@@ -289,7 +289,7 @@ class Infer:
                                         wikidata.part_of_relation_object(search_alist))
                             break
                     except Exception as ex:
-                        self.write_trace(f"{pcol.RED}Search Error{pcol.RESET}", processLog.LogLevel.ERROR)
+                        self.write_trace(f"{pcol.RED}Search Error{pcol.RESETALL}", processLog.LogLevel.ERROR)
                         print(str(ex))
             if not found_facts and alist.get(tt.PROPERTY).startswith('__geopolitical:'):
                 if search_attr == tt.SUBJECT:
@@ -331,7 +331,7 @@ class Infer:
                 self.G.link(alist, ff, alist.parent_decomposition)
 
                 # fact is considered reduced
-                self.write_trace(f'  {pcol.MAGENTA}found:>>>{pcol.RESET} {str(ff)}')
+                self.write_trace(f'  {pcol.MAGENTA}found:>>>{pcol.RESET} {str(ff)}{pcol.RESETALL}')
         return len(found_facts) > 0
 
     def get_map_strategy(self, alist: Alist):
@@ -403,8 +403,8 @@ class Infer:
             alist.state = states.IGNORE
             return alist
 
-        self.write_trace('{blue}{bold}T{thread}{reset} > {op}:{id}-{alist}'.format(
-            blue=pcol.BLUE, reset=pcol.RESET, bold=pcol.RESET,
+        self.write_trace('{blue}{bold}T{thread}{reset} > {op}:{id}-{alist}{resetall}'.format(
+            blue=pcol.BLUE, reset=pcol.RESET, bold=pcol.RESET,resetall=pcol.RESETALL,
             thread=threading.get_ident(), 
             op=map_op[1], alist=alist, id=alist.id))
         alist.branchType = br.OR
@@ -413,17 +413,17 @@ class Infer:
         context = alist.get(tt.CONTEXT)
         self.last_heartbeat = time.time()
         if child is not None:
-            self.write_trace(f'{pcol.YELLOW}>> {child.id}{pcol.RESET}-{str(child)}')  
+            self.write_trace(f'{pcol.BLUE}>> {child.id}{pcol.RESET}-{str(child)}{pcol.RESETALL}')  
             succ  = self.G.successors(child.id)
             for node_id1 in succ:
                 grandchild = self.G.alist(node_id1)
-                self.write_trace(f'  {pcol.BLUE}>>> {grandchild.id}{pcol.RESET}-{str(grandchild)}')
+                self.write_trace(f'  {pcol.BLUE}>>> {grandchild.id}{pcol.RESET}-{str(grandchild)}{pcol.RESETALL}')
                 reducibleCtr = 0
                 succ2  = self.G.successors(grandchild.id)
                 for node_id2 in succ2:
                     ggchild = self.G.alist(node_id2)
                     self.write_trace(
-                        f'  {pcol.BLUE}>>> {ggchild.id}{pcol.RESET}-{str(ggchild)}')
+                        f'  {pcol.BLUE}>>> {ggchild.id}{pcol.RESET}-{str(ggchild)}{pcol.RESETALL}')
                     if ggchild.state == states.REDUCIBLE:   
                         self.G.add_alist(ggchild)
                         reducibleCtr += 1
@@ -454,7 +454,7 @@ class Infer:
         """
         alist = self.G.alist(alist_id)
         self.last_heartbeat = time.time()
-        self.write_trace(f'{pcol.YELLOW}reducing: >><< {alist.id}{pcol.RESET}-{alist}')
+        self.write_trace(f'{pcol.YELLOW}reducing: >><< {alist.id}{pcol.RESET}-{alist}{pcol.RESETALL}')
 
         reduce_op = None
         try:
@@ -469,7 +469,7 @@ class Infer:
                       if (x.state == states.REDUCIBLE or x.state == states.REDUCED) 
                           and x.get(tt.OP).lower() != 'comp']
         for x in reducibles:
-            self.write_trace(f'  {pcol.YELLOW}<<< {x.id}{pcol.RESET}-{x}')
+            self.write_trace(f'  {pcol.YELLOW}<<< {x.id}{pcol.RESET}-{x}{pcol.RESETALL}')
 
         unexplored = [
             x for x in children if x.state == states.UNEXPLORED]
@@ -489,17 +489,17 @@ class Infer:
             alist.state = states.REDUCIBLE #check later
             self.G.add_alist(alist)
             self.explainer.what(self.G, alist, True)
-            self.write_trace(f"{pcol.GREEN}reduced:<< {alist.id}{pcol.RESET}-{alist}")
+            self.write_trace(f"{pcol.GREEN}reduced:<< {alist.id}{pcol.RESET}-{alist}{pcol.RESETALL}")
             return True
         else:
             self.explainer.what(self.G, alist, False)
-            self.write_trace(f"{pcol.YELLOW}reduce failed:<< {alist.id}{pcol.RESET}-{alist}")
+            self.write_trace(f"{pcol.YELLOW}reduce failed:<< {alist.id}{pcol.RESET}-{alist}{pcol.RESETALL}")
             return False
 
     def propagate(self, alist_id):
         self.last_heartbeat = time.time()
         curr_alist = self.G.alist(alist_id)
-        self.write_trace(f'{pcol.GREEN}propagate:^^ {curr_alist.id}{pcol.RESET}-{curr_alist}')
+        self.write_trace(f'{pcol.GREEN}propagate:^^ {curr_alist.id}{pcol.RESET}-{curr_alist}{pcol.RESETALL}')
         # try:
         while self.G.parent_ids(curr_alist.id):
             # get parent alist and apply its reduce operation to its successors
