@@ -13,7 +13,7 @@ import time
 from frank import config
 from frank.alist import Alist
 # from frank.cache import neo4j, redis
-from frank.cache.redis import RedisClientPool
+# from frank.cache.redis import RedisClientPool
 
 REDIS = 'redis'
 NEO4J = 'neo4j'

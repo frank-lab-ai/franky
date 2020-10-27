@@ -12,7 +12,8 @@ import time
 
 import frank.cache.logger as clogger
 import frank.map.map_wrapper
-import frank.processLog
+import frank.processLog as plog
+from frank.processLog import pcolors as pcol
 import frank.reduce.comp
 import frank.reduce.eq
 import frank.reduce.gpregress
@@ -168,8 +169,9 @@ class Infer:
 
             if is_propagated:
                 prop_alist = self.G.alist(self.root.id)
-                self.write_trace("intermediate ans:>> {}-{}".format(
-                    prop_alist.id, prop_alist), loglevel=processLog.LogLevel.ANSWER)
+                self.write_trace(f"{pcol.CYAN}intermediate ans:>> " \
+                                 f"{prop_alist.id}{pcol.RESET}-{prop_alist}", 
+                    loglevel=processLog.LogLevel.ANSWER)
                 curr_propagated_alists.append(prop_alist.copy())
                 self.propagated_alists.append(prop_alist.copy())
         else:
@@ -192,7 +194,7 @@ class Infer:
         
         """
         self.last_heartbeat = time.time()
-        self.write_trace("search:>>{} {}".format(alist.id, alist))
+        self.write_trace(f"{pcol.MAGENTA}search:>> {alist.id}{pcol.RESET} {alist}")
         if alist.state == states.EXPLORED:
             new_alist = alist.copy()
             new_alist.state = states.EXPLORED
@@ -202,7 +204,11 @@ class Infer:
         prop_string = alist.get(tt.PROPERTY)
         prop_refs = []
         found_facts = []
-        for source_name, source in {'wikidata':wikidata, 'worldbank':worldbank}.items():
+        sources = {
+            'wikidata':wikidata
+            # ,'worldbank':worldbank
+            }
+        for source_name, source in sources.items():
         # for source_name, source in {'worldbank':worldbank}.items():
             search_alist = alist.copy()
             # inject context into IR
@@ -260,7 +266,7 @@ class Infer:
                     #                                                         search_attributes=searchable_attr)
                     if cache_found_flag == True:
                         found_facts.append(results[0])
-                        self.write_trace('found:>>> cache')
+                        self.write_trace(f'{pcol.MAGENTA}found:>>> cache{pcol.RESET}')
                 # if not found_facts:
                 #     self.write_trace('found:>>> cache')
             if not cache_found_flag and prop_string in self.property_refs:
@@ -283,7 +289,7 @@ class Infer:
                                         wikidata.part_of_relation_object(search_alist))
                             break
                     except Exception as ex:
-                        self.write_trace("Search Error", processLog.LogLevel.ERROR)
+                        self.write_trace(f"{pcol.RED}Search Error{pcol.RESET}", processLog.LogLevel.ERROR)
                         print(str(ex))
             if not found_facts and alist.get(tt.PROPERTY).startswith('__geopolitical:'):
                 if search_attr == tt.SUBJECT:
@@ -319,16 +325,13 @@ class Infer:
                 if ff.get(tt.PROPERTY) in self.reverse_property_refs:
                     ff.set(tt.PROPERTY,
                            self.reverse_property_refs[ff.get(tt.PROPERTY)])
-                # alist.link_child(ff)
                 
                 alist.parent_decomposition = "Lookup"                
-                # self.enqueue_node(ff, alist, False, 'Lookup')
                 self.G.add_alist(alist)
                 self.G.link(alist, ff, alist.parent_decomposition)
 
-                # self.add_reduced_alist_to_redis(ff) # leaf node from retrieved
                 # fact is considered reduced
-                self.write_trace(' found:>>> {}'.format(str(ff)))
+                self.write_trace(f'  {pcol.MAGENTA}found:>>>{pcol.RESET} {str(ff)}')
         return len(found_facts) > 0
 
     def get_map_strategy(self, alist: Alist):
@@ -400,25 +403,27 @@ class Infer:
             alist.state = states.IGNORE
             return alist
 
-        self.write_trace('T{thread} > {op}:{id}-{alist}'.format(
-            thread=threading.get_ident(), op=map_op[1], alist=alist, id=alist.id))
+        self.write_trace('{blue}{bold}T{thread}{reset} > {op}:{id}-{alist}'.format(
+            blue=pcol.BLUE, reset=pcol.RESET, bold=pcol.RESET,
+            thread=threading.get_ident(), 
+            op=map_op[1], alist=alist, id=alist.id))
         alist.branchType = br.OR
         child = map_op[0](alist, self.G)
         # check for query context
         context = alist.get(tt.CONTEXT)
         self.last_heartbeat = time.time()
         if child is not None:
-            self.write_trace('>> {}-{}'.format(child.id, str(child)))  
+            self.write_trace(f'{pcol.YELLOW}>> {child.id}{pcol.RESET}-{str(child)}')  
             succ  = self.G.successors(child.id)
             for node_id1 in succ:
                 grandchild = self.G.alist(node_id1)
-                self.write_trace('>>> {}-{}'.format(grandchild.id, str(grandchild)))
+                self.write_trace(f'  {pcol.BLUE}>>> {grandchild.id}{pcol.RESET}-{str(grandchild)}')
                 reducibleCtr = 0
                 succ2  = self.G.successors(grandchild.id)
                 for node_id2 in succ2:
                     ggchild = self.G.alist(node_id2)
                     self.write_trace(
-                        '>>> {}-{}'.format(ggchild.id, str(ggchild)))
+                        f'  {pcol.BLUE}>>> {ggchild.id}{pcol.RESET}-{str(ggchild)}')
                     if ggchild.state == states.REDUCIBLE:   
                         self.G.add_alist(ggchild)
                         reducibleCtr += 1
@@ -449,7 +454,7 @@ class Infer:
         """
         alist = self.G.alist(alist_id)
         self.last_heartbeat = time.time()
-        self.write_trace('reducing:>><< {}-{}'.format(alist.id, alist))
+        self.write_trace(f'{pcol.YELLOW}reducing: >><< {alist.id}{pcol.RESET}-{alist}')
 
         reduce_op = None
         try:
@@ -464,7 +469,7 @@ class Infer:
                       if (x.state == states.REDUCIBLE or x.state == states.REDUCED) 
                           and x.get(tt.OP).lower() != 'comp']
         for x in reducibles:
-            self.write_trace('  <<< {}-{}'.format(x.id, x))
+            self.write_trace(f'  {pcol.YELLOW}<<< {x.id}{pcol.RESET}-{x}')
 
         unexplored = [
             x for x in children if x.state == states.UNEXPLORED]
@@ -482,63 +487,32 @@ class Infer:
                 r.state = states.REDUCED
                 self.G.add_alist(r)
             alist.state = states.REDUCIBLE #check later
-
-            # these are there for the COMP operation that creates new nodes
-            # after reducing
-            # for n in alist.nodes_to_enqueue_only:
-            #     self.enqueue_node(n[0], n[1], n[2], n[3])
-            # in a reducer generated new node, then they MUST be processed immediately,
-            # so place in nodesQueue, not waitQueue
-            # for n in alist.nodes_to_enqueue_and_process:
-            #     self.enqueue_node(n[0], n[1], n[2], n[3])
-            # clear nodes to enqueue to prevent reuse if node is cloned to
-            # create child nodes
-            # alist.nodes_to_enqueue_only.clear()
-            # alist.nodes_to_enqueue_and_process.clear()
             self.G.add_alist(alist)
             self.explainer.what(self.G, alist, True)
-            self.write_trace("reduced:<< {}-{}".format(alist.id, alist))
+            self.write_trace(f"{pcol.GREEN}reduced:<< {alist.id}{pcol.RESET}-{alist}")
             return True
         else:
             self.explainer.what(self.G, alist, False)
-            self.write_trace("reduce failed:<< {}-{}".format(alist.id, alist))
+            self.write_trace(f"{pcol.YELLOW}reduce failed:<< {alist.id}{pcol.RESET}-{alist}")
             return False
 
     def propagate(self, alist_id):
         self.last_heartbeat = time.time()
         curr_alist = self.G.alist(alist_id)
-        self.write_trace('^^ {}-{}'.format(curr_alist.id, curr_alist))
-        try:
-            while self.G.parent_ids(curr_alist.id):
-                # get parent alist and apply its reduce operation to its successors
-                if self.aggregate(self.G.parent_ids(curr_alist.id)[0]):
-                    # set the parent to the current alist and recurse 
-                    curr_alist = self.G.parent_alists(curr_alist.id)[0]
-                else:
-                    return False
-        except Exception as e:
-            self.write_trace("Error during propagation: " +
-                             str(e), processLog.LogLevel.ERROR)
-            return False
+        self.write_trace(f'{pcol.GREEN}propagate:^^ {curr_alist.id}{pcol.RESET}-{curr_alist}')
+        # try:
+        while self.G.parent_ids(curr_alist.id):
+            # get parent alist and apply its reduce operation to its successors
+            if self.aggregate(self.G.parent_ids(curr_alist.id)[0]):
+                # set the parent to the current alist and recurse 
+                curr_alist = self.G.parent_alists(curr_alist.id)[0]
+            else:
+                return False
+        # except Exception as e:
+        #     self.write_trace("Error during propagation: " +
+        #                      str(e), processLog.LogLevel.ERROR)
+        #     return False
         return True
-
-    def write_trace_reduced(self, alist: Alist):
-        # clogger.Logging().log(('redis', ',mset', True, '{}:alist:{}'.format(
-        #     self.session_id, alist.id), str(alist)))
-        # self.write_graph(alist)
-        self.G.add_alist(alist)
 
     def write_trace(self, content, loglevel=processLog.LogLevel.INFO):
         processLog.println(content, processLog.LogLevel.INFO)
-        # if(loglevel <= processLog.baseLogLevel):
-        #     # save log to redis store
-        #     clogger.Logging().log(('redis', 'lpush', False,  self.session_id + ':trace', content))
-
-    def write_graph(self, alist: Alist, parent: Alist = None, edge: str = None):
-        # clogger.Logging().log(('neo4j', alist, parent, edge, self.session_id))
-        # if parent:
-        #     self.G.add_alist(parent)
-        #     self.G.link(parent, alist, edge)
-        # else:
-        #     self.G.add_alist(alist)
-        pass

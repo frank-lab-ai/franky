@@ -18,6 +18,7 @@ from frank.alist import Branching as branching
 from frank import config
 from frank.util import utils
 from frank.graph import InferenceGraph
+from frank.processLog import pcolors as pcol
 import frank.context
 
 class Launcher():
@@ -29,7 +30,7 @@ class Launcher():
         self.inference_graphs = {}
 
     def start(self, alist: Alist, session_id, inference_graphs):
-        ''' Create new inference graph and infer'''
+        ''' Create new inference graph to infere answer'''
         G = InferenceGraph()
         self.frank_infer = Infer(G)
         self.frank_infer.session_id = session_id
@@ -41,7 +42,7 @@ class Launcher():
         self.frank_infer.enqueue_root(alist)
         self.schedule(-1)
 
-    def start_for_api(self, alist_obj, session_id, inference_graphs):
+    def api_start(self, alist_obj, session_id, inference_graphs):
 
         a = Alist(**alist_obj)
         t = threading.Thread(target=self.start, args=(a, session_id, inference_graphs))
@@ -49,6 +50,9 @@ class Launcher():
         return session_id
 
     def schedule(self, last_root_prop_depth):
+        ''' Loop through the leaves of the inference graph and 
+        schedule nodes to resolve.
+        '''
         if time.time() - self.frank_infer.last_heartbeat > self.timeout:
             # stop and print any answer found
             self.cache_and_print_answer(True)
@@ -106,7 +110,6 @@ class Launcher():
         elapsed_time = time.time() - self.start_time
         answer = 'No answer found'
         
-
         if self.frank_infer.propagated_alists:
             latest_root = self.frank_infer.propagated_alists[-1]
 
@@ -151,20 +154,9 @@ class Launcher():
                 'answer': ans_obj if isFinal else None,
             }
 
-            # if isFinal:
-            #     RedisClientPool().get_client().lpush(
-            #         self.frank_infer.session_id + ':answer',  json.dumps(ans_obj))
-            # else:
-            #     RedisClientPool().get_client().set(self.frank_infer.session_id +
-            #                                        ':partialAnswer',  json.dumps(ans_obj))
-            # RedisClientPool().get_client().expire(
-            #     self.frank_infer.session_id + ':answer', config.config['redis_expire_seconds'])
             if isFinal:
-                print(json.dumps(ans_obj, indent=2))
+                print(f"\n{pcol.CYAN}Answer alist{pcol.RESETALL} \n" + json.dumps(ans_obj, indent=2))
 
-
-if __name__ == '__main__':
-    # prediction
-    launcher = Launcher()
-    session_id = uuid.uuid4().hex
-    launcher.start(b, session_id)
+# if __name__ == '__main__':
+#     launcher = Launcher()    
+#     launcher.cli()

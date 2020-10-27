@@ -14,6 +14,7 @@ from frank.alist import States as states
 from frank.alist import NodeTypes as nt
 from frank.util import utils
 from frank.graph import InferenceGraph
+from frank.processLog import pcolors as pcol
 
 
 def reduce(alist: Alist, children: List[Alist], G: InferenceGraph):
@@ -72,7 +73,7 @@ def reduce(alist: Alist, children: List[Alist], G: InferenceGraph):
             if x.id != alist.id:
                 # x.prune()
                 G.prune(x.id)
-                print('sibling pruned:>>{} {}'.format(x.id, x))
+                print(f'{pcol.RED}sibling pruned:>> {x.id}{pcol.RESET} {x}')
 
     # setup new sibling branch(s)
     parent = G.parent_alists(alist.id)[0]
@@ -88,7 +89,7 @@ def reduce(alist: Alist, children: List[Alist], G: InferenceGraph):
     # alist.parent[0].link_child(op_alist)
     G.link(parent, op_alist, 'comp')
     nodes_enqueue.append((op_alist, parent, False, 'comp'))
-    print('sibling-branch:>>{} {}'.format(op_alist.id, op_alist))
+    print(f'{pcol.BLUE}set-comp:>> {op_alist.id}{pcol.RESET} {op_alist}')
     if alist.children:
         nodes_enqueue.append((op_alist, alist, False, 'set_comp'))
 
@@ -109,7 +110,7 @@ def reduce(alist: Alist, children: List[Alist], G: InferenceGraph):
         G.link(op_alist, new_sibling, 'comp_lookup')
         nodes_enqueue_process.append(
             (new_sibling, op_alist, True, 'comp_lookup'))
-        print('sibling-child:>>{} {}'.format(new_sibling.id, new_sibling))
+        print(f'{pcol.BLUE}  set-comp-child>>> {new_sibling.id}{pcol.RESET} {new_sibling}')
 
     alist.state = states.IGNORE
     alist.nodes_to_enqueue_only = nodes_enqueue

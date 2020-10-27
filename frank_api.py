@@ -7,7 +7,7 @@ Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
 
 from flask import Flask, request, Response
 import json
-from frank.scheduler import Launcher
+from frank.launcher import Launcher
 from frank.config import config
 import frank.explain
 import frank.query_parser.parser
@@ -27,7 +27,7 @@ def get_status():
 def query_frank():
     query = request.json['alist']
     session_id = request.json['sessionId']
-    Launcher().start_for_api(query, session_id, inference_graphs)
+    Launcher().api_start(query, session_id, inference_graphs)
     response_data = {"session_id": session_id}
     response = Response(
         mimetype="application/json",

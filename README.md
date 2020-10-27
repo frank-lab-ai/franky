@@ -41,17 +41,13 @@ npm start
 # Reference Papers
 Here are links to our academic papers on FRANK. Please reference these papers when you use or extend FRANK.
 
-1. Nuamah, K., Bundy, A. and Lucas, C., 2016, September. Functional inferences over heterogeneous data. In International Conference on Web Reasoning and Rule Systems (pp. 159-166). Springer, Cham.
-https://www.research.ed.ac.uk/portal/files/26530704/rif_rr_short_final_1.pdf
+1. Nuamah, K., Bundy, A. and Lucas, C., 2016, September. Functional inferences over heterogeneous data. In International Conference on Web Reasoning and Rule Systems (pp. 159-166). Springer, Cham. [[Link]](https://www.research.ed.ac.uk/portal/files/26530704/rif_rr_short_final_1.pdf)
 
-2. Bundy, A., Nuamah, K. and Lucas, C., 2018, September. Automated Reasoning in the Age of the Internet. In International Conference on Artificial Intelligence and Symbolic Computation (pp. 3-18). Springer, Cham.
-https://link.springer.com/chapter/10.1007/978-3-319-99957-9_1
+2. Bundy, A., Nuamah, K. and Lucas, C., 2018, September. Automated Reasoning in the Age of the Internet. In International Conference on Artificial Intelligence and Symbolic Computation (pp. 3-18). Springer, Cham. [[Link]](https://link.springer.com/chapter/10.1007/978-3-319-99957-9_1)
 
-3. Nuamah, K. and Bundy, A., 2018, September. Calculating error bars on inferences from web data. In Proceedings of SAI Intelligent Systems Conference (pp. 618-640). Springer, Cham.
-https://www.research.ed.ac.uk/portal/files/58152744/rif_uncertainty_IS2018_sNack.pdf
+3. Nuamah, K. and Bundy, A., 2018, September. Calculating error bars on inferences from web data. In Proceedings of SAI Intelligent Systems Conference (pp. 618-640). Springer, Cham.[[Link]](https://www.research.ed.ac.uk/portal/files/58152744/rif_uncertainty_IS2018_sNack.pdf)
 
-4. Nuamah, K.; and Bundy, A. 2020. Explainable Inference in the FRANK Query Answering System. In Proceedings of the 24th European Conference on Artificial Intelligence (ECAI 2020).
-https://www.research.ed.ac.uk/portal/files/141996163/ECAI20_nuamah_paper17.pdf
+4. Nuamah, K.; and Bundy, A. 2020. Explainable Inference in the FRANK Query Answering System. In Proceedings of the 24th European Conference on Artificial Intelligence (ECAI 2020).[[Link]](https://www.research.ed.ac.uk/portal/files/141996163/ECAI20_nuamah_paper17.pdf)
 
 
 
