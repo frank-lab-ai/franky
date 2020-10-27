@@ -13,5 +13,5 @@ class Map(ABC):
         super().__init__()
 
     @abstractmethod
-    def decompose(self, alist):
+    def decompose(self, alist, G):
         pass

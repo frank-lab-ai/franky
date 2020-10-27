@@ -2,7 +2,7 @@
 File: comp.py
 Description: Set comprehension reduce operation
 Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
-Copyright 2014 - 2020  Kobby K.A. Nuamah
+
 '''
 
 from typing import List
@@ -13,9 +13,11 @@ from frank.alist import Branching as br
 from frank.alist import States as states
 from frank.alist import NodeTypes as nt
 from frank.util import utils
+from frank.graph import InferenceGraph
+from frank.processLog import pcolors as pcol
 
 
-def reduce(alist: Alist, children: List[Alist]):
+def reduce(alist: Alist, children: List[Alist], G: InferenceGraph):
     if not children:
         return None
 
@@ -27,7 +29,7 @@ def reduce(alist: Alist, children: List[Alist]):
     head, *tail = children
     has_head_children = False
     has_tail_children = False
-    for c in head.children:
+    for c in G.child_alists(head.id):
         has_head_children = True
         if c.get(tt.OP) != 'comp':
             if c.get(tt.OPVAR).startswith(vx.NESTING):
@@ -40,7 +42,7 @@ def reduce(alist: Alist, children: List[Alist]):
 
     for t in tail:
         c_items = set()
-        for tc in t.children:
+        for tc in G.child_alists(t.id):
             has_tail_children = True
             if tc.get(tt.OPVAR).startswith(vx.NESTING):
                 c_items.add(str(c.instantiation_value(tc.get(tt.OPVAR))))
@@ -66,43 +68,49 @@ def reduce(alist: Alist, children: List[Alist]):
         return None
     else:
         # if common items not empty, ignore existing siblings before creating new siblings
-        for x in alist.parent[0].children:
+        sibs = G.child_alists(G.parent_alists(alist.id)[0].id)
+        for x in sibs:
             if x.id != alist.id:
-                x.prune()
-                print("sibling pruned:>>{} {}".format(x.id, x))
+                # x.prune()
+                G.prune(x.id)
+                print(f'{pcol.RED}sibling pruned:>> {x.id}{pcol.RESET} {x}{pcol.RESETALL}')
 
     # setup new sibling branch(s)
-    op_alist = alist.parent[0].copy()
+    parent = G.parent_alists(alist.id)[0]
+    op_alist = parent.copy()
     op_alist.set(alist.get(tt.OPVAR), '')
 
-    op_alist.set(tt.OP, alist.parent[0].get(tt.OP))
-    op_alist.set(tt.OPVAR, alist.parent[0].get(tt.OPVAR))
-    op_alist.set(op_alist.get(tt.OPVAR), "")
+    op_alist.set(tt.OP, parent.get(tt.OP))
+    op_alist.set(tt.OPVAR, parent.get(tt.OPVAR))
+    op_alist.set(op_alist.get(tt.OPVAR), '')
     op_alist.state = states.EXPLORED
     # set as an aggregation node to help with display rendering
     op_alist.node_type = nt.HNODE
-    alist.parent[0].link_child(op_alist)
-    nodes_enqueue.append((op_alist, alist.parent[0], False, "comp"))
-    print("sibling-branch:>>{} {}".format(op_alist.id, op_alist))
+    # alist.parent[0].link_child(op_alist)
+    G.link(parent, op_alist, 'comp')
+    nodes_enqueue.append((op_alist, parent, False, 'comp'))
+    print(f'{pcol.BLUE}set-comp:>> {op_alist.id}{pcol.RESET} {op_alist}{pcol.RESETALL}')
     if alist.children:
-        nodes_enqueue.append((op_alist, alist, False, "set_comp"))
+        nodes_enqueue.append((op_alist, alist, False, 'set_comp'))
 
     # create children of the new branch
     # copy to avoid using different version from another thread in loop
     op_alist_copy = op_alist.copy()
     for ff in common_items:
         new_sibling: Alist = op_alist_copy.copy()
-        new_sibling.set(tt.OP, "value")
+        new_sibling.set(tt.OP, 'value')
         new_sibling.set(tt.OPVAR, op_alist_copy.get(tt.OPVAR))
         new_sibling.set(alist.get(tt.OPVAR), ff)
         new_sibling.instantiate_variable(alist.get(tt.OPVAR), ff)
         for ref in new_sibling.variable_references(alist.get(tt.OPVAR)):
             if ref not in [tt.OPVAR]:
                 new_sibling.set(ref, ff)
-        op_alist.link_child(new_sibling)
+        # op_alist.link_child(new_sibling)
+        new_sibling.node_type = nt.ZNODE
+        G.link(op_alist, new_sibling, 'comp_lookup')
         nodes_enqueue_process.append(
-            (new_sibling, op_alist, True, "comp_lookup"))
-        print("sibling-child:>>{} {}".format(new_sibling.id, new_sibling))
+            (new_sibling, op_alist, True, 'comp_lookup'))
+        print(f'{pcol.BLUE}  set-comp-child>>> {new_sibling.id}{pcol.RESET} {new_sibling}{pcol.RESETALL}')
 
     alist.state = states.IGNORE
     alist.nodes_to_enqueue_only = nodes_enqueue

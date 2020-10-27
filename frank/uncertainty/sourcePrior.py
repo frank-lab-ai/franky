@@ -2,7 +2,7 @@
 File: sourcePrior.py
 Description: Manage prior uncertainty for knowledge sources.
 Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
-Copyright 2014 - 2020  Kobby K.A. Nuamah
+
 '''
 
 from datetime import datetime

@@ -2,7 +2,7 @@
 File: worldbank.py
 Description: Interface to the World Bank dataset.
 Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
-Copyright 2014 - 2020  Kobby K.A. Nuamah
+
 '''
 
 import requests
@@ -75,7 +75,7 @@ def find_property_object(alist: Alist):
                 for d in data[1]:
                     data_alist = alist.copy()
                     data_alist.set(tt.OBJECT, d['value'])
-                    data_alist.data_sources.add('worldbank')
+                    data_alist.data_sources = list(set(data_alist.data_sources + ['worldbank']))
                     results.append(data_alist)
         except Exception as ex:
             print("worldbank query response error: " + str(ex))

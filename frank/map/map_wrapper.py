@@ -2,7 +2,7 @@
 File: map_wrapper.py
 Description: A wrapper for various decomposition operations.
 Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
-Copyright 2014 - 2020  Kobby K.A. Nuamah
+
 '''
 
 from frank.map.geospatial import Geospatial

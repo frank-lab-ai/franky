@@ -2,7 +2,7 @@
 File: propagate.py
 Description: Operation to propagate child alists to parents
 Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
-Copyright 2014 - 2020  Kobby K.A. Nuamah
+
 '''
 
 from typing import List
@@ -14,7 +14,7 @@ from frank.alist import States as states
 from frank.alist import NodeTypes as nt
 from frank.util import utils
 from frank.uncertainty.aggregateUncertainty import estimate_uncertainty
-
+from frank.graph import InferenceGraph
 
 def projections(parent: Alist, alists_to_propagate):
     ''' propagate projection from selected child alist to its parent [in place]'''

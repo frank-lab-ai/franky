@@ -2,19 +2,18 @@
 File: inference.py
 Description: Core functions to the FRANK algorithm
 Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
-Copyright 2014 - 2020  Kobby K.A. Nuamah
+
 '''
 
 import datetime
 import random
 import threading
 import time
-from heapq import heappop, heappush
 
 import frank.cache.logger as clogger
-import frank.cache.neo4j
 import frank.map.map_wrapper
-import frank.processLog
+import frank.processLog as plog
+from frank.processLog import pcolors as pcol
 import frank.reduce.comp
 import frank.reduce.eq
 import frank.reduce.gpregress
@@ -44,75 +43,92 @@ from .explain import Explanation
 from frank import processLog
 from frank.uncertainty.sourcePrior import SourcePrior as sourcePrior
 import frank.context
+from frank.graph import InferenceGraph
 
 
-class Execute:
+class Infer:    
+    """ 
+    Resolve alists by infer projection variables in alist
 
-    def __init__(self):
-        self.trace = ''
+    Attributes
+    ----------
+    G: InferenceGraph
+        
+    session_id : str
+
+    last_heartbeat : time
+        The last time an inference activity happened to 
+        determine when to time-out.
+
+    property_refs : dict
+        Reference to properties in knowledge bases that match predicate in query.
+
+    reverse_property_ref s: dict
+        Inverse references to properties in knowledge bases that match predicate in query.
+
+    max_depth: int
+        The current maximum depth in the inference graph from the root node.
+
+    propagated_alists : list
+        List of root node alists resolved after successful propagation 
+        of variables from leaf nodes.
+
+    root : Alist
+        Alist in the root node of inference graph.
+
+    explainer: Explanation
+        An object to generate explanations.     
+    
+    """
+
+    def __init__(self, G:InferenceGraph):
+        """
+        Parameters
+        ----------
+        G : InferenceGraph
+        """
+        self.G = G
         self.session_id = '0'
         self.last_heartbeat = time.time()
-        self.nodes_queue = []
-        self.wait_queue = []
         self.property_refs = {}
         self.reverse_property_refs = {}
-        self.graph_nodes = []
-        self.graph_edges = []
-        self.has_temp_answer = False
-        self.max_depth_process_so_far = 0
-        self.answer_propagated_to_root = []
+        self.max_depth = 0
+        self.propagated_alists = []
         self.root = None
         self.explainer = Explanation()
 
     def enqueue_root(self, alist):
+        """ Add alist as the root node of the inference graph"""
         self.root = alist
-        self.enqueue_node(alist, None, True, '')
+        self.G.add_alist(alist)
 
-    def enqueue_node(self, alist: Alist, parent: Alist, to_be_processed: bool, decomp_rule: str):
-        try:
-            if to_be_processed:
-                heappush(self.nodes_queue, (alist.cost, alist,
-                                            parent, to_be_processed, decomp_rule))
-            self.graph_nodes.append(alist)
-            if parent is not None:
-                self.graph_edges.append((parent.id, alist.id))
-            # update the trace store
-            # try:
-            clogger.Logging().log(
-                (clogger.REDIS, 'lpush', True, self.session_id + ':graphNodes', str(alist)))
-            if parent:
-                clogger.Logging().log(('redis', 'lpush', True,
-                                       self.session_id +
-                                       ':graphEdges', str(alist),
-                                       '{{"source":"{}", "target":"{}" }}'.format(parent.id, alist.id)))
-            self.write_graph(alist, parent=parent, edge=decomp_rule)
-        except Exception:
-            print("Exception occurred when adding node to queue")
 
     def run_frank(self, alist: Alist):
-        '''
-        For the given alist, attempt to instantiate projection variable
-        If instantiation is successful, attempt to reduce
-        Else decompose and add new children to queue
-        '''
-        self.last_heartbeat = time.time()
-        propagated_to_root = False
-        self.max_depth_process_so_far = alist.depth
-        if alist.state is states.PRUNED:
-            self.write_trace("ignore pruned:>> {}-{}".format(alist.id, alist))
-            return propagated_to_root
+        """ Run the FRANK algorithm for an alist
 
-        # self.writeToGraph(alist)
-        # log the current thread id
-        # pass
+        Args
+        ----
+        alist : Alist
+
+        Return
+        ------
+        Return True if the instantiation of the project variable of an alist 
+        is propagated to the root node.
+
+        Notes
+        -----
+        For the given alist, attempt to instantiate projection 
+        variable. If instantiation is successful, attempt to reduce
+        Else decompose and add new children to queue
+        """
+        self.last_heartbeat = time.time()
+        curr_propagated_alists = []
+        self.max_depth = alist.depth
+        if alist.state is states.PRUNED:
+            self.write_trace(f"{pcol.RED}ignore pruned:>> {alist.id}{pcol.RESET}-{alist}{pcol.RESETALL}")
+            return propagated_alists
 
         bool_result = False
-        # check if OPVAR is instantiated
-        # if OPVAR is instantiated, set bool_result to TRUE
-        # if alist.is_instantiated(alist.get(tt.OPVAR)):
-        #     bool_result = True
-        # if the the projection vars are already instantiated
-        #   then make the alist reducible and return True
         proj_vars = alist.projection_variables()
         proj_instantiated = True
         if proj_vars:
@@ -131,36 +147,54 @@ class Execute:
 
         if bool_result:
             alist.state = states.REDUCIBLE
-            self.write_trace_reduced(alist)  # to change state in cache
+            self.G.add_alist(alist)
         # if OPVAR not instantiated, search KB
         elif not bool_result:
             bool_result = self.search_kb(alist)
         # search kb for the variable instantiation
 
         if bool_result:
+            is_propagated = False
             if alist.state != states.REDUCIBLE:  # if in reducible state, don't change
                 alist.state = states.EXPLORED
+                self.G.add_alist(alist)
             if agg_instantiated and proj_instantiated:
                 alist.state = states.REDUCIBLE
-            if alist.children:
-                propagated_to_root = self.propagate(alist.children[0])
+                self.G.add_alist(alist)
+            if self.G.child_ids(alist.id):
+                is_propagated = self.propagate(self.G.child_ids(alist.id)[0])
             else:
-                propagated_to_root = self.propagate(
-                    alist.parent[0].children[0])
+                is_propagated = self.propagate(
+                    self.G.child_ids(self.G.parent_ids(alist.id)[0])[0])
 
-            if propagated_to_root:
-                self.write_trace("intermediate ans:>> {}-{}".format(
-                    self.root.id, self.root), loglevel=processLog.LogLevel.ANSWER)
-                self.answer_propagated_to_root.append(self.root.copy())
+            if is_propagated:
+                prop_alist = self.G.alist(self.root.id)
+                self.write_trace(f"{pcol.CYAN}intermediate ans:>> " \
+                                 f"{prop_alist.id}{pcol.RESET}-{prop_alist}{pcol.RESETALL}", 
+                    loglevel=processLog.LogLevel.ANSWER)
+                curr_propagated_alists.append(prop_alist.copy())
+                self.propagated_alists.append(prop_alist.copy())
         else:
             alist.state = states.EXPLORED
+            self.G.add_alist(alist)
             for mapOp in self.get_map_strategy(alist):
                 self.decompose(alist, mapOp)
-        return propagated_to_root
+        return curr_propagated_alists
 
     def search_kb(self, alist: Alist):
+        """ Search knowledge bases to instantiate variables in alist.
+        
+        Args
+        ----
+        alist: Alist
+
+        Return
+        ------
+        Returns `True` if variable instantiation is successful from a KB search.
+        
+        """
         self.last_heartbeat = time.time()
-        self.write_trace("search:>>{} {}".format(alist.id, alist))
+        self.write_trace(f"{pcol.MAGENTA}search:>> {alist.id}{pcol.RESET} {alist}{pcol.RESETALL}")
         if alist.state == states.EXPLORED:
             new_alist = alist.copy()
             new_alist.state = states.EXPLORED
@@ -170,7 +204,11 @@ class Execute:
         prop_string = alist.get(tt.PROPERTY)
         prop_refs = []
         found_facts = []
-        for source_name, source in {'wikidata':wikidata, 'worldbank':worldbank}.items():
+        sources = {
+            'wikidata':wikidata
+            # ,'worldbank':worldbank
+            }
+        for source_name, source in sources.items():
         # for source_name, source in {'worldbank':worldbank}.items():
             search_alist = alist.copy()
             # inject context into IR
@@ -211,9 +249,10 @@ class Execute:
                 searchable_attr = list(filter(lambda x: x != search_attr,
                                             [tt.SUBJECT, tt.PROPERTY, tt.OBJECT, tt.TIME]))
                 # search with original property name
-                (cache_found_flag, results) = frank.cache.neo4j.search_cache(alist_to_instantiate=search_alist,
-                                                                        attribute_to_instantiate=search_attr,
-                                                                        search_attributes=searchable_attr)
+                (cache_found_flag, results) = (False, [])
+                # (cache_found_flag, results) = frank.cache.neo4j.search_cache(alist_to_instantiate=search_alist,
+                #                                                         attribute_to_instantiate=search_attr,
+                #                                                         search_attributes=searchable_attr)
                 if cache_found_flag == True:
                     found_facts.append(results[0])
                 # search with source-specific property IDs
@@ -221,12 +260,13 @@ class Execute:
                 for (propid, _source_name) in self.property_refs[prop_string]:
                     self.last_heartbeat = time.time()
                     search_alist.set(tt.PROPERTY, propid[0])
-                    (cache_found_flag, results) = frank.cache.neo4j.search_cache(alist_to_instantiate=search_alist,
-                                                                            attribute_to_instantiate=search_attr,
-                                                                            search_attributes=searchable_attr)
+                    (cache_found_flag, results) = (False, [])
+                    #  = frank.cache.neo4j.search_cache(alist_to_instantiate=search_alist,
+                    #                                                         attribute_to_instantiate=search_attr,
+                    #                                                         search_attributes=searchable_attr)
                     if cache_found_flag == True:
                         found_facts.append(results[0])
-                        self.write_trace('found:>>> cache')
+                        self.write_trace(f'{pcol.MAGENTA}found:>>> cache{pcol.RESETALL}')
                 # if not found_facts:
                 #     self.write_trace('found:>>> cache')
             if not cache_found_flag and prop_string in self.property_refs:
@@ -249,7 +289,7 @@ class Execute:
                                         wikidata.part_of_relation_object(search_alist))
                             break
                     except Exception as ex:
-                        self.write_trace("Search Error", processLog.LogLevel.ERROR)
+                        self.write_trace(f"{pcol.RED}Search Error{pcol.RESETALL}", processLog.LogLevel.ERROR)
                         print(str(ex))
             if not found_facts and alist.get(tt.PROPERTY).startswith('__geopolitical:'):
                 if search_attr == tt.SUBJECT:
@@ -285,15 +325,27 @@ class Execute:
                 if ff.get(tt.PROPERTY) in self.reverse_property_refs:
                     ff.set(tt.PROPERTY,
                            self.reverse_property_refs[ff.get(tt.PROPERTY)])
-                alist.link_child(ff)
-                alist.parent_decomposition = "Lookup"
-                self.enqueue_node(ff, alist, False, 'Lookup')
-                # self.add_reduced_alist_to_redis(ff) # leaf node from retrieved
+                
+                alist.parent_decomposition = "Lookup"                
+                self.G.add_alist(alist)
+                self.G.link(alist, ff, alist.parent_decomposition)
+
                 # fact is considered reduced
-                self.write_trace(' found:>>> {}'.format(str(ff)))
+                self.write_trace(f'  {pcol.MAGENTA}found:>>>{pcol.RESET} {str(ff)}{pcol.RESETALL}')
         return len(found_facts) > 0
 
     def get_map_strategy(self, alist: Alist):
+        """ Get decomposition rules to apply to an alist
+        
+        Args
+        ----
+        alist : Alist
+
+        Return
+        ------
+        ops : A list of reduce functions for aggregating alists
+
+        """
         # TODO: learn to predict best strategy given path of root from
         # node and attributes in alist
         self.last_heartbeat = time.time()
@@ -313,67 +365,96 @@ class Execute:
             random.shuffle(ops)
             return ops
 
-    def decompose(self, alist: Alist, mapOp):
+    def decompose(self, alist: Alist, map_op):
+        """ Apply a decomposition rule to create successors of an alist
+
+        Args
+        ----
+        alist : Alist to decompose
+
+        map_op : str
+            Name of the map operation to apply to the alist
+
+        Return
+        ------
+        alist: Alist
+            Successor h-node alist that has z-node child alists
+        
+        Notes
+        -----
+        z-nodes are alists that represent facts and contain variables that 
+        are to be instantiated with data from knowledge bases.
+        h-nodes are alists that have operations to aggregate their child z-nodes.
+        Decompositions create z-node and specify the `h` operations for aggregating 
+        the decomposed child nodes.
+
+                    (alist)
+                       |
+                       |
+                    (h-node)
+                    / ... \\
+                   /  ...  \\   
+            (z-node1) ... (z-nodeN)
+
+        """
         self.last_heartbeat = time.time()
         if alist.depth + 1 > config.config['max_depth']:
             print('max depth reached!\n')
             alist.state = states.IGNORE
             return alist
 
-        self.write_trace('T{thread} > {op}:{id}-{alist}'.format(
-            thread=threading.get_ident(), op=mapOp[1], alist=alist, id=alist.id))
+        self.write_trace('{blue}{bold}T{thread}{reset} > {op}:{id}-{alist}{resetall}'.format(
+            blue=pcol.BLUE, reset=pcol.RESET, bold=pcol.RESET,resetall=pcol.RESETALL,
+            thread=threading.get_ident(), 
+            op=map_op[1], alist=alist, id=alist.id))
         alist.branchType = br.OR
-        child = mapOp[0](alist)
+        child = map_op[0](alist, self.G)
         # check for query context
         context = alist.get(tt.CONTEXT)
-        # if child and context:            
-        #     # do no assume child query context is the same as parent
-        #     child.set(tt.CONTEXT, [context[0], context[1],{}])
-        #     frank.context.inject_query_context(child)
         self.last_heartbeat = time.time()
         if child is not None:
-            child.node_type = nt.HNODE
-            self.write_trace('>> {}-{}'.format(child.id, str(child)))
-            self.write_graph(child, parent=alist, edge=mapOp[1])
-            if child.state != states.EXPLORED:
-                child.parent_decomposition = mapOp[1]
-                heappush(self.wait_queue, (child.cost,
-                                           child, alist, False, mapOp[1]))
-
-            for grandchild in child.children:
-                grandchild.node_type = nt.ZNODE
-                grandchild.set(tt.CONTEXT, child.get(tt.CONTEXT))
-                self.write_graph(grandchild, parent=child, edge=mapOp[1])
-                self.write_trace(
-                    '>>> {}-{}'.format(grandchild.id, str(grandchild)))
-                if grandchild.state != states.EXPLORED:
-                    heappush(self.wait_queue, (grandchild.cost,
-                                               grandchild, child, True, mapOp[1]))
+            self.write_trace(f'{pcol.BLUE}>> {child.id}{pcol.RESET}-{str(child)}{pcol.RESETALL}')  
+            succ  = self.G.successors(child.id)
+            for node_id1 in succ:
+                grandchild = self.G.alist(node_id1)
+                self.write_trace(f'  {pcol.BLUE}>>> {grandchild.id}{pcol.RESET}-{str(grandchild)}{pcol.RESETALL}')
                 reducibleCtr = 0
-                for ggc in grandchild.children:
-                    ggc.node_type = nt.ZNODE
-                    ggc.set(tt.CONTEXT, child.get(tt.CONTEXT))
-                    self.write_graph(ggc, parent=grandchild, edge=mapOp[1])
-                    self.write_trace('>>>> {}-{}'.format(ggc.id, str(ggc)))
-                    if ggc.state == states.REDUCIBLE:
-                        if reducibleCtr == 0:
-                            heappush(self.nodes_queue, (ggc.cost,
-                                                        ggc, grandchild, False, mapOp[1]))
-                        # self.enqueue_node(ggc, grandchild, False, mapOp[1])
-                        self.write_trace_reduced(ggc)
+                succ2  = self.G.successors(grandchild.id)
+                for node_id2 in succ2:
+                    ggchild = self.G.alist(node_id2)
+                    self.write_trace(
+                        f'  {pcol.BLUE}>>> {ggchild.id}{pcol.RESET}-{str(ggchild)}{pcol.RESETALL}')
+                    if ggchild.state == states.REDUCIBLE:   
+                        self.G.add_alist(ggchild)
                         reducibleCtr += 1
-                    elif ggc.state != states.EXPLORED:
-                        heappush(self.wait_queue, (ggc.cost,
-                                                   ggc, grandchild, True, mapOp[1]))
             # generate the WHY explanation
-            self.explainer.why(alist, mapOp[1])
+            self.explainer.why(self.G, alist, map_op[1])
             return child
         else:
             return None
 
-    def aggregate(self, alist: Alist):
+    def aggregate(self, alist_id):
+        """ Aggregate the child nodes of an alist by applying the operation 
+            specified by the *`h`* attribute of the node's alist.
+
+        Args
+        ----
+        alist_id : str
+            Id of alist whose child nodes should be aggregated
+        
+        Return
+        --------
+        Returns True if aggregation was successful.  
+
+        Notes
+        -----
+        Only child alists that are in the `reduced` or `reducible` states are aggregated.
+        The result of the aggregation is stored in the alist and the inference graph is updated.
+        Text explaining the aggregation is also added to the `xp` attribute of the alist.
+        """
+        alist = self.G.alist(alist_id)
         self.last_heartbeat = time.time()
-        self.write_trace('reducing:>><< {}-{}'.format(alist.id, alist))
+        self.write_trace(f'{pcol.YELLOW}reducing: >><< {alist.id}{pcol.RESET}-{alist}{pcol.RESETALL}')
 
         reduce_op = None
         try:
@@ -382,77 +463,56 @@ class Execute:
             print(f"Cannot process {alist.get(tt.OP).lower()}")
 
         assert(reduce_op is not None)
-
-        reducibles = [x for x in alist.children
-                      if x.state == states.REDUCIBLE and x.get(tt.OP).lower() != 'comp']
+        
+        children = self.G.child_alists(alist.id)
+        reducibles = [x for x in children
+                      if (x.state == states.REDUCIBLE or x.state == states.REDUCED) 
+                          and x.get(tt.OP).lower() != 'comp']
         for x in reducibles:
-            self.write_trace('  <<< {}-{}'.format(x.id, x))
+            self.write_trace(f'  {pcol.YELLOW}<<< {x.id}{pcol.RESET}-{x}{pcol.RESETALL}')
 
         unexplored = [
-            x for x in alist.children if x.state == states.UNEXPLORED]
-        if not reducibles or len(unexplored) == len(alist.children):
+            x for x in children if x.state == states.UNEXPLORED]
+        if not reducibles or len(unexplored) == len(children):
             return False  # there's nothing to reduce
 
-        reducedAlist = reduce_op.reduce(alist, reducibles)
+        reducedAlist = reduce_op.reduce(alist, reducibles, self.G)
 
         last_heartbeat = time.time()
 
         if reducedAlist is not None:
-            for c in alist.children:
-                alist.data_sources.update(list(c.data_sources))
-            alist.state = states.REDUCIBLE
-            # these are there for the COMP operation that creates new nodes
-            # after reducing
-            for n in alist.nodes_to_enqueue_only:
-                self.enqueue_node(n[0], n[1], n[2], n[3])
-            # in a reducer generated new node, then they MUST be processed immediately,
-            # so place in nodesQueue, not waitQueue
-            for n in alist.nodes_to_enqueue_and_process:
-                self.enqueue_node(n[0], n[1], n[2], n[3])
-            # clear nodes to enqueue to prevent reuse if node is cloned to
-            # create child nodes
-            alist.nodes_to_enqueue_only.clear()
-            alist.nodes_to_enqueue_and_process.clear()
-
-            self.explainer.what(alist, True)
-            self.write_trace_reduced(alist)
-            self.write_trace("reduced:<< {}-{}".format(alist.id, alist))
+            for c in children:
+                alist.data_sources = list(set(alist.data_sources + c.data_sources))
+            for r in reducibles:
+                r.state = states.REDUCED
+                self.G.add_alist(r)
+            alist.state = states.REDUCIBLE #check later
+            self.G.add_alist(alist)
+            self.explainer.what(self.G, alist, True)
+            self.write_trace(f"{pcol.GREEN}reduced:<< {alist.id}{pcol.RESET}-{alist}{pcol.RESETALL}")
             return True
         else:
-            self.explainer.what(alist, False)
-            self.write_trace("reduce failed:<< {}-{}".format(alist.id, alist))
+            self.explainer.what(self.G, alist, False)
+            self.write_trace(f"{pcol.YELLOW}reduce failed:<< {alist.id}{pcol.RESET}-{alist}{pcol.RESETALL}")
             return False
 
-    def propagate(self, alist: Alist):
+    def propagate(self, alist_id):
         self.last_heartbeat = time.time()
-        curr_alist = alist
-        self.write_trace('^^ {}-{}'.format(alist.id, alist))
-        try:
-            while curr_alist.parent:
-                # get the parent alist and apply its reduce operation to its
-                # children
-                if self.aggregate(curr_alist.parent[0]):
-                    # set the parent to the current alist and recurse up the
-                    # tree
-                    curr_alist = curr_alist.parent[0]
-                else:
-                    return False
-        except Exception as e:
-            self.write_trace("Error during propagation: " +
-                             str(e), processLog.LogLevel.ERROR)
-            return False
+        curr_alist = self.G.alist(alist_id)
+        self.write_trace(f'{pcol.GREEN}propagate:^^ {curr_alist.id}{pcol.RESET}-{curr_alist}{pcol.RESETALL}')
+        # try:
+        while self.G.parent_ids(curr_alist.id):
+            # get parent alist and apply its reduce operation to its successors
+            if self.aggregate(self.G.parent_ids(curr_alist.id)[0]):
+                # set the parent to the current alist and recurse 
+                curr_alist = self.G.parent_alists(curr_alist.id)[0]
+            else:
+                return False
+        # except Exception as e:
+        #     self.write_trace("Error during propagation: " +
+        #                      str(e), processLog.LogLevel.ERROR)
+        #     return False
         return True
-
-    def write_trace_reduced(self, alist: Alist):
-        clogger.Logging().log(('redis', ',mset', True, '{}:alist:{}'.format(
-            self.session_id, alist.id), str(alist)))
-        self.write_graph(alist)
 
     def write_trace(self, content, loglevel=processLog.LogLevel.INFO):
         processLog.println(content, processLog.LogLevel.INFO)
-        if(loglevel <= processLog.baseLogLevel):
-            # save log to redis store
-            clogger.Logging().log(('redis', 'lpush', False,  self.session_id + ':trace', content))
-
-    def write_graph(self, alist: Alist, parent: Alist = None, edge: str = None):
-        clogger.Logging().log(('neo4j', alist, parent, edge, self.session_id))

@@ -2,7 +2,7 @@
 File: temporal.py
 Description: Temporal decomposition of Alist
 Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
-Copyright 2014 - 2020  Kobby K.A. Nuamah
+
 '''
 
 # import _context
@@ -15,13 +15,15 @@ from frank.alist import VarPrefix as vx
 from frank.alist import Branching as br
 from frank.alist import States as states
 from frank.alist import Contexts as ctx
+from frank.alist import NodeTypes as nt
 from .map import Map
 import frank.context
+from frank.graph import InferenceGraph
 
 
 class Temporal(Map):
 
-    def decompose(self, alist:A):
+    def decompose(self, alist:A, G:InferenceGraph):
         current_year = datetime.datetime.now().year
         branch_factor = config.config["temporal_branching_factor"]
         parent_year = None
@@ -57,22 +59,30 @@ class Temporal(Map):
         op_alist.branch_type = br.AND
         op_alist.state = states.EXPLORED
         op_alist.parent_decomposition = 'temporal'
-        alist.link_child(op_alist)
+        op_alist.node_type = nt.HNODE
+        # alist.link_child(op_alist)
+        G.link(alist, op_alist, op_alist.parent_decomposition)
         if (current_year - parent_year.year) > branch_factor/2:
             for i in range(1, math.ceil(branch_factor/2)):
                 child_a = alist.copy()
                 child_a.set(tt.TIME, str(parent_year.year + i))
                 child_a.set(tt.OP, "value")
                 child_a.cost = op_alist.cost + 1
+                child_a.node_type = nt.ZNODE
+                child_a.set(tt.CONTEXT, op_alist.get(tt.CONTEXT))
                 frank.context.flush(child_a, [tt.TIME])
-                op_alist.link_child(child_a)
+                # op_alist.link_child(child_a)
+                G.link(op_alist, child_a, 'value')
 
                 child_b = alist.copy()
                 child_b.set(tt.TIME, str(parent_year.year - i))
                 child_b.set(tt.OP, "value")
                 child_b.cost = op_alist.cost + 1
+                child_b.set(tt.CONTEXT, op_alist.get(tt.CONTEXT))
                 frank.context.flush(child_b, [tt.TIME])
-                op_alist.link_child(child_b)
+                child_b.node_type = nt.ZNODE
+                # op_alist.link_child(child_b)
+                G.link(op_alist, child_b, 'value')
                 count = count + 2
         elif parent_year.year >= current_year:
             for i in range(1, math.ceil(branch_factor)):
@@ -80,8 +90,11 @@ class Temporal(Map):
                 child_a.set(tt.TIME, str(current_year - i))
                 child_a.set(tt.OP, "value")
                 child_a.cost = op_alist.cost + 1
+                child_a.node_type = nt.ZNODE
+                child_a.set(tt.CONTEXT, op_alist.get(tt.CONTEXT))
                 frank.context.flush(child_a, [tt.TIME])
-                op_alist.link_child(child_a)
+                # op_alist.link_child(child_a)
+                G.link(op_alist, child_a, 'value')
                 count = count + 1
 
         for i in range(1, (branch_factor - count)):
@@ -89,7 +102,10 @@ class Temporal(Map):
             child_a.set(tt.TIME, str(parent_year.year - (count + i)))
             child_a.set(tt.OP, "value")
             child_a.cost = op_alist.cost + 1
+            child_a.node_type = nt.ZNODE
+            child_a.set(tt.CONTEXT, op_alist.get(tt.CONTEXT))
             frank.context.flush(child_a, [tt.TIME])
-            op_alist.link_child(child_a)
+            # op_alist.link_child(child_a)
+            G.link(op_alist, child_a, 'value')
 
         return op_alist

@@ -2,7 +2,7 @@
 File: lte.py
 Description: less-than-or-equal-to reduce operation
 Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
-Copyright 2014 - 2020  Kobby K.A. Nuamah
+
 '''
 
 from typing import List
@@ -15,9 +15,9 @@ from frank.alist import NodeTypes as nt
 from frank.util import utils
 from frank.uncertainty.aggregateUncertainty import estimate_uncertainty
 from frank.reduce import propagate
+from frank.graph import InferenceGraph
 
-
-def reduce(alist: Alist, children: List[Alist]):
+def reduce(alist: Alist, children: List[Alist], G: InferenceGraph):
     # do comparisons
     vars_to_compare = alist.get(tt.OPVAR).split(' ')
 

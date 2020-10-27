@@ -148,7 +148,10 @@ def flush(alist: Alist, items) -> Alist:
     Flush query context that whose corresponding alist attribute value is different
     """
     for k in items:
-        if k in alist.get(tt.CONTEXT)[2] and alist.get(tt.CONTEXT)[2][k] != alist.get(k):
-            del alist.get(tt.CONTEXT)[2][k]
+        try:
+            if k in alist.get(tt.CONTEXT)[2] and alist.get(tt.CONTEXT)[2][k] != alist.get(k):
+                del alist.get(tt.CONTEXT)[2][k]
+        except:
+            pass
 
     return alist
