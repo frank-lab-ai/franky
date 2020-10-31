@@ -12,6 +12,7 @@ from frank.alist import Attributes as tt
 from frank.kb import rdf
 from frank.kb import mongo
 from frank import config
+import frank.dataloader
 
 indicators = {
     "population": "SP.POP.TOTL",
@@ -85,9 +86,7 @@ def find_property_object(alist: Alist):
     return results
 
 
-def getCountryPropertyDb(countryName, countryProperty):
-    if countryName in common_synonyms:
-        countryName = common_synonyms[countryName]
+def getCountryPropertyDb_db(countryName, countryProperty):
     result = ''
     try:
         client = mongo.getClient()
@@ -102,7 +101,23 @@ def getCountryPropertyDb(countryName, countryProperty):
 
     return result
 
-def find_location_of_entity(entity_name: str):
+def getCountryPropertyDb(countryName, countryProperty):
+    if countryName in common_synonyms:
+        countryName = common_synonyms[countryName]
+    result = ''
+    
+    if config.config['use_db']:
+        return getCountryPropertyDb_db(countryName, countryProperty)
+    else:        
+        results = []
+        df = frank.dataloader.load_worldbank_countries()
+        df_filtered_prop = df[df['name'] == countryName][countryProperty]
+        if len(df_filtered_prop) > 0:
+            result = df_filtered_prop.iloc[0]
+
+        return result
+
+def find_location_of_entity_in_db(entity_name: str):
     """
     Returns an array of (entity id, location id, location_label)
     """
@@ -114,23 +129,39 @@ def find_location_of_entity(entity_name: str):
         db = client[config.config['mongo_db']]
         db_result = db['wb_countries'].find({'name': entity_name})
         for d in db_result:
-            # results.append((d['id'],
-            #                 d['id'],
-            #                 d['name']
-            #                ))
             results.append((d['id'],
                             d['region']['id'],
                             d['region']['value']
-                           ))
-            
+                           ))            
 
         db_result2 = db['wb_countries'].find({'capitalCity': entity_name})
         for d in db_result2:
-            results.append((entity_name,
-                            d['id'],
-                            d['name']
-                           ))
+            results.append((entity_name, d['id'], d['name']))
 
     except Exception as ex:
         print('Error retreiving WB data from MongoDB: ' + str(ex.args))
     return results
+
+def find_location_of_entity(entity_name: str):
+    if config.config['use_db']:
+        return find_location_of_entity_in_db(entity_name)
+    else:        
+        results = []
+        df = frank.dataloader.load_worldbank_countries()
+        df_filtered = df[df['name'] == entity_name]
+        df_filtered  = df_filtered[['id','region.id','region.value']]
+        results = [tuple(x) for x in df_filtered.to_numpy()]
+        # for d in df_filtered:
+        #     results.append((d['id'],
+        #                     d['region.id'],
+        #                     d['region.value']
+        #                    ))
+
+        df_filtered = df[df['capitalcity'] == entity_name]
+        df_filtered  = df_filtered[['id','name']]
+        result2 = [(entity_name, x[0], x[1]) for x in df_filtered.to_numpy()]
+        results.extend(result2)
+        # for d in df_filtered:
+        #     results.append((entity_name, d['id'], d['name']))
+        return results
+            
