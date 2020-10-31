@@ -6,6 +6,7 @@ Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
 '''
 
 import requests
+import difflib
 import urllib.parse
 from pymongo import MongoClient
 from frank.alist import Alist
@@ -14,9 +15,24 @@ from frank import config
 from frank.kb import mongo
 import frank.util.utils
 from datetime import datetime
+import frank.dataloader
+
 
 
 def search_properties(search_term):
+    if config.config['use_db']:
+        return search_db_properties(search_term)
+    else:        
+        df = frank.dataloader.load_wikidata_props()
+        df['score'] = df['label'].apply(lambda x: difflib.SequenceMatcher(None, search_term,x).ratio())
+        df_sorted = df.sort_values(by=['score'], ascending=False)
+        df_sorted = df_sorted[df_sorted['score'] > 0.8]
+        if len(df_sorted) > 0:
+            return [(df_sorted.iloc[0]['id'], df_sorted.iloc[0]['label'])]
+        else:
+            return []   
+
+def search_db_properties(search_term):
     results = []
     if search_term == 'type':
         results.append(('P31', 'type'))
