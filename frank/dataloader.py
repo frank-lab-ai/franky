@@ -33,8 +33,14 @@ def load_predicate_priors():
     return load_data('predicate_priors')
 
 def save_predicate_priors(df: pd.DataFrame):
-    filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', 'predicate_priors.pickle')
-    df.to_pickle(filepath)
+    update_data(df, 'predicate_priors')
 
 def load_source_priors():
     return load_data('source_priors')
+
+def save_source_priors(df: pd.DataFrame):
+    update_data(df, 'source_priors')
+
+def update_data(df: pd.DataFrame, filename):
+    filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', filename + '.pickle')
+    df.to_pickle(filepath)
