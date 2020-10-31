@@ -91,7 +91,7 @@ class PropertyPrior():
             else:
                 # if no stored prior, save the default prior
                 self.save()
-        return prior
+            return prior
 
     
     def get_prior_from_db(self, source: str, property: str):
