@@ -32,7 +32,30 @@ class PropertyPrior():
         self.variance = variance
         self.lastModified = lastModified
 
-    def save_db(self):
+            
+    def save(self):
+        """
+        Save or update the prior object
+        """
+        if config["update_priors"] == False or self.source == "":
+            return
+        if config["use_db"]:
+            return self.save_to_db()
+        else:   
+            df = frank.dataloader.load_predicate_priors()
+            columns = ['source','predicate','mean','variance','lastModified']
+            data = [self.source, self.property, self.mean, self.variance, self.lastModified.utcnow()]
+            res = df.loc[(df.source == self.source) & (df.predicate == self.property)]
+            if len(res) > 0:
+                result = df.loc[(df.source == self.source) & (df.predicate == self.property), 
+                                columns] = data
+            else:
+                df2 = pd.DataFrame([data], columns=columns)
+                df = df.append(df2, ignore_index=True)
+            frank.dataloader.save_predicate_priors(df)
+            return True
+
+    def save_to_db(self):
         """
         Save or update the prior object
         """
@@ -48,30 +71,30 @@ class PropertyPrior():
         )
         return result
 
-        
-    def save(self):
+    def get_prior(self, source: str, property: str):
         """
-        Save or update the prior object
+        Retrieve a prior object for the requested knowledge source.
         """
-        if config["update_priors"] == False or self.source == "":
-            return
         if config["use_db"]:
-            return self.save_db()
+            return self.getPrior_from_db()
         else:   
+            prior = PropertyPrior(
+                        source, property, mean=defaultMean, variance=defaultVariance)
             df = frank.dataloader.load_predicate_priors()
-            columns = ['source','predicate','mean','variance','lastModified']
-            data = [self.source, self.property, self.mean, self.variance, self.lastModified.utcnow()]
-            res = df.loc[(df.source == self.source) & (df.predicate == self.property)]
-            if len(res) > 0:
-                result = df.loc[(df.source == self.source) & (df.predicate == self.property), 
-                                columns] = data
+            results = df.loc[(df.source == source) & (df.predicate == property), 
+                          ['source','mean','variance']]
+            if len(results) > 0:
+                record = results.head().to_numpy()
+                prior.source = record[0][0]
+                prior.mean = record[0][1]
+                prior.variance = record[0][2]
             else:
-                df2 = pd.DataFrame([data], columns=columns)
-                df = df.append(df2, ignore_index=True)
-            frank.dataloader.save_predicate_priors(df)
-            return True
+                # if no stored prior, save the default prior
+                self.save()
+        return prior
 
-    def getPrior(self, source: str, property: str):
+    
+    def get_prior_from_db(self, source: str, property: str):
         """
         Retrieve a prior object for the requested knowledge source.
         """
@@ -118,8 +141,8 @@ class PropertyPrior():
 
     def getObservedValueEstimate(self, dataPoints, source, property):
         # get the source predicate prior
-        self = PropertyPrior().getPrior(source, property)
-        kbPrior = sourcePrior.SourcePrior().getPrior(source)
+        self = PropertyPrior().get_prior(source, property)
+        kbPrior = sourcePrior.SourcePrior().get_prior(source)
         estimatedMeanVariance = None
         n = len(dataPoints)
         dataY = [y for (_, y) in dataPoints]
