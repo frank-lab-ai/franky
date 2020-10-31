@@ -7,11 +7,13 @@ Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
 
 from datetime import datetime
 import numpy as np
+import pandas as pd
 import math
 import statistics
 from frank.config import config
 import frank.uncertainty.sourcePrior as sourcePrior
 from frank.kb import mongo
+import frank.dataloader
 
 # client = MongoClient(host=config["mongo_host"], port=config["mongo_port"])
 client = mongo.getClient()
@@ -30,7 +32,7 @@ class PropertyPrior():
         self.variance = variance
         self.lastModified = lastModified
 
-    def save(self):
+    def save_db(self):
         """
         Save or update the prior object
         """
@@ -45,6 +47,29 @@ class PropertyPrior():
             upsert=True
         )
         return result
+
+        
+    def save(self):
+        """
+        Save or update the prior object
+        """
+        if config["update_priors"] == False or self.source == "":
+            return
+        if config["use_db"]:
+            return self.save_db()
+        else:   
+            df = frank.dataloader.load_predicate_priors()
+            columns = ['source','predicate','mean','variance','lastModified']
+            data = [self.source, self.property, self.mean, self.variance, self.lastModified.utcnow()]
+            res = df.loc[(df.source == self.source) & (df.predicate == self.property)]
+            if len(res) > 0:
+                result = df.loc[(df.source == self.source) & (df.predicate == self.property), 
+                                columns] = data
+            else:
+                df2 = pd.DataFrame([data], columns=columns)
+                df = df.append(df2, ignore_index=True)
+            frank.dataloader.save_predicate_priors(df)
+            return True
 
     def getPrior(self, source: str, property: str):
         """
@@ -68,7 +93,7 @@ class PropertyPrior():
 
     def posterior(self, dataPoints, knownVariance):
         """
-        Get posterior parameters give the observed data
+        Get posterior parameters given the observed data
         """
         priorVariance = self.variance
         posteriorMean = 0.0
