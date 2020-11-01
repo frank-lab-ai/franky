@@ -6,7 +6,12 @@ def load_data(filename):
     ''' load wikidata properties in a pandas dataframe from a pickle file'''
     ''
 
-    filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data', filename)
+    directory = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+    filepath = os.path.join(directory, filename)
+
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+
     csv_file = filepath + '.csv'
     pickle_file = filepath + '.pickle'
     if os.path.isfile(pickle_file) is False:
