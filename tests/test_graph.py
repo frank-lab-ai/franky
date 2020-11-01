@@ -156,5 +156,10 @@ class Test_Graph(unittest.TestCase):
 
         self.assertTrue(len(gg['nodes']) > 2)
 
+    def test_plot_plotly(self):
+        G = self.create_graph2()
+        G.plot_plotly()
+        self.assertTrue(True)
+
 if __name__ == '__main__':
     unittest.main()
