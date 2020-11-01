@@ -7,11 +7,13 @@ Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
 
 from datetime import datetime
 import numpy as np
+import pandas as pd
 import math
 import statistics
 from frank.config import config
 import frank.uncertainty.sourcePrior as sourcePrior
 from frank.kb import mongo
+import frank.dataloader
 
 # client = MongoClient(host=config["mongo_host"], port=config["mongo_port"])
 client = mongo.getClient()
@@ -30,7 +32,30 @@ class PropertyPrior():
         self.variance = variance
         self.lastModified = lastModified
 
+            
     def save(self):
+        """
+        Save or update the prior object
+        """
+        if config["update_priors"] == False or self.source == "":
+            return
+        if config["use_db"]:
+            return self.save_to_db()
+        else:   
+            df = frank.dataloader.load_predicate_priors()
+            columns = ['source','predicate','mean','variance','lastModified']
+            data = [self.source, self.property, self.mean, self.variance, self.lastModified.utcnow()]
+            res = df.loc[(df.source == self.source) & (df.predicate == self.property)]
+            if len(res) > 0:
+                result = df.loc[(df.source == self.source) & (df.predicate == self.property), 
+                                columns] = data
+            else:
+                df2 = pd.DataFrame([data], columns=columns)
+                df = df.append(df2, ignore_index=True)
+            frank.dataloader.save_predicate_priors(df)
+            return True
+
+    def save_to_db(self):
         """
         Save or update the prior object
         """
@@ -46,7 +71,30 @@ class PropertyPrior():
         )
         return result
 
-    def getPrior(self, source: str, property: str):
+    def get_prior(self, source: str, property: str):
+        """
+        Retrieve a prior object for the requested knowledge source.
+        """
+        if config["use_db"]:
+            return self.getPrior_from_db()
+        else:   
+            prior = PropertyPrior(
+                        source, property, mean=defaultMean, variance=defaultVariance)
+            df = frank.dataloader.load_predicate_priors()
+            results = df.loc[(df.source == source) & (df.predicate == property), 
+                          ['source','mean','variance']]
+            if len(results) > 0:
+                record = results.head().to_numpy()
+                prior.source = record[0][0]
+                prior.mean = record[0][1]
+                prior.variance = record[0][2]
+            else:
+                # if no stored prior, save the default prior
+                self.save()
+            return prior
+
+    
+    def get_prior_from_db(self, source: str, property: str):
         """
         Retrieve a prior object for the requested knowledge source.
         """
@@ -68,7 +116,7 @@ class PropertyPrior():
 
     def posterior(self, dataPoints, knownVariance):
         """
-        Get posterior parameters give the observed data
+        Get posterior parameters given the observed data
         """
         priorVariance = self.variance
         posteriorMean = 0.0
@@ -93,8 +141,8 @@ class PropertyPrior():
 
     def getObservedValueEstimate(self, dataPoints, source, property):
         # get the source predicate prior
-        self = PropertyPrior().getPrior(source, property)
-        kbPrior = sourcePrior.SourcePrior().getPrior(source)
+        self = PropertyPrior().get_prior(source, property)
+        kbPrior = sourcePrior.SourcePrior().get_prior(source)
         estimatedMeanVariance = None
         n = len(dataPoints)
         dataY = [y for (_, y) in dataPoints]

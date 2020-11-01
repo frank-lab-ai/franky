@@ -32,7 +32,8 @@ server = {
     "derived_decompositions": {
         "geospatial" : ["join", ["isa", "partition"]],
         "product": ["join", ["isa", "feature"] ]
-    }
+    },
+    "use_db": False
 }
 
 # local config
@@ -69,7 +70,8 @@ local = {
     "derived_decompositions": {
         "geospatial" : ["join", ["isa", "partition"]],
         "product": ["join", ["isa", "feature"] ]
-    }
+    },
+    "use_db": False
 }
 
 # set to local or server

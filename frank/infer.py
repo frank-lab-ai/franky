@@ -316,7 +316,7 @@ class Infer:
                     non_numeric_data_items.append(ff.get(search_attr))
                 ff.set(tt.OPVAR, alist.get(tt.OPVAR))
                 ff.set(ff.get(tt.OPVAR), ff.get(search_attr))
-                sourceCov = sourcePrior().getPrior(
+                sourceCov = sourcePrior().get_prior(
                     source=list(ff.data_sources)[0]).cov
                 ff.set(tt.COV, sourceCov)
                 ff.state = states.REDUCIBLE
