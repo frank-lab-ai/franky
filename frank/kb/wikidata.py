@@ -28,7 +28,7 @@ def search_properties(search_term):
         df_sorted = df.sort_values(by=['score'], ascending=False)
         df_sorted = df_sorted[df_sorted['score'] > 0.8]
         if len(df_sorted) > 0:
-            return [(df_sorted.iloc[0]['id'], df_sorted.iloc[0]['label'])]
+            return [(df_sorted.iloc[0]['id'], df_sorted.iloc[0]['label'], df_sorted.iloc[0]['score'])]
         else:
             return []   
 
