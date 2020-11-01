@@ -7,6 +7,7 @@ Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
 
 import networkx as nx
 import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 from frank.alist import Alist
 from frank.alist import States as st
 
@@ -26,7 +27,7 @@ class InferenceGraph(nx.DiGraph):
         # plt.plot()        
         pos = nx.spring_layout(self)
         nx.draw(self, pos=pos, with_labels=True, **{'node_size':500, 'node_color': 'red', 'width':1, 'font_size': 8 })
-        edge_labels = nx.get_edge_attributes(self, 'label')
+             
         formatted_edge_labels = {(elem[0],elem[1]):edge_labels[elem] for elem in edge_labels}
         nx.draw_networkx_edge_labels(self, pos=pos, edge_labels=edge_labels)
         # plt.show(block=False)
@@ -134,7 +135,88 @@ class InferenceGraph(nx.DiGraph):
         nodes = set(list(ancestors.keys()) + list(descendants.keys()))
         blanket = self.subgraph(nodes)
         return blanket
-    
+
+    def plot_plotly(self):
+        G = self
+        pos = nx.spring_layout(G)
+        edge_x = []
+        edge_y = []
+        for edge in G.edges():
+            x0, y0 = pos[edge[0]][0], pos[edge[0]][1]
+            x1, y1 = pos[edge[1]][0], pos[edge[1]][1]
+            edge_x.append(x0)
+            edge_x.append(x1)
+            edge_x.append(None)
+            edge_y.append(y0)
+            edge_y.append(y1)
+            edge_y.append(None)
+
+        edge_trace = go.Scatter(
+            x=edge_x, y=edge_y,
+            line=dict(width=0.5, color='#888'),
+            hoverinfo='none',
+            mode='lines')
+
+        node_x = []
+        node_y = []
+        node_alist_text = []
+        for node in G.nodes():
+            x, y = pos[node]
+            node_x.append(x)
+            node_y.append(y)
+            text = str(self.alist(node))
+            text = text.replace(': {',': <br>{')
+            node_alist_text.append(text)
+
+        node_trace = go.Scatter(
+            x=node_x, y=node_y,
+            mode='markers',
+            hoverinfo='text',
+            marker=dict(
+                showscale=True,
+                # colorscale options
+                #'Greys' | 'YlGnBu' | 'Greens' | 'YlOrRd' | 'Bluered' | 'RdBu' |
+                #'Reds' | 'Blues' | 'Picnic' | 'Rainbow' | 'Portland' | 'Jet' |
+                #'Hot' | 'Blackbody' | 'Earth' | 'Electric' | 'Viridis' |
+                colorscale='YlGnBu',
+                reversescale=True,
+                color=[],
+                size=10,
+                colorbar=dict(
+                    thickness=15,
+                    title='Node Connections',
+                    xanchor='left',
+                    titleside='right'
+                ),
+                line_width=2))
+
+        node_adjacencies = []
+        node_text = []
+        for node, adjacencies in enumerate(G.adjacency()):
+            node_adjacencies.append(len(adjacencies[1]))
+            # node_text.append('# of connections: '+str(len(adjacencies[1])))
+            node_text.append(node_alist_text[node] + "<br># connections:" +str(len(adjacencies[1])))
+
+        node_trace.marker.color = node_adjacencies
+        node_trace.text = node_text
+
+        fig = go.Figure(data=[edge_trace, node_trace],
+                    layout=go.Layout(
+                        title='FRANK Inference Graph',
+                        titlefont_size=16,
+                        showlegend=False,
+                        hovermode='closest',
+                        margin=dict(b=20,l=5,r=5,t=40),
+                        annotations=[ dict(
+                            text="",
+                            showarrow=False,
+                            xref="paper", yref="paper",
+                            x=0.005, y=-0.002 ) ],
+                        xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                        yaxis=dict(showgrid=False, zeroline=False, showticklabels=False))
+                        )
+        fig.show()
+
         
         
     

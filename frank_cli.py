@@ -40,46 +40,13 @@ def cli():
         launch.start(alist, session_id, inference_graphs)
 
         if session_id in inference_graphs:
-            plt.ion()
-            fig = plt.figure()
-            plt.show()
             graph = inference_graphs[session_id]['graph']
-            graph.display()  
+            graph.plot_plotly()
         input("\npress any key to exit")
     else:
         print("\nCould not parse question. Please try again.")
 
 
-def show_graph(G):
-    node_x = []
-    node_y = []
-    for node in G.nodes():
-        x, y = G.nodes[node]['pos']
-        node_x.append(x)
-        node_y.append(y)
-
-    node_trace = go.Scatter(
-        x=node_x, y=node_y,
-        mode='markers',
-        hoverinfo='text',
-        marker=dict(
-            showscale=True,
-            # colorscale options
-            #'Greys' | 'YlGnBu' | 'Greens' | 'YlOrRd' | 'Bluered' | 'RdBu' |
-            #'Reds' | 'Blues' | 'Picnic' | 'Rainbow' | 'Portland' | 'Jet' |
-            #'Hot' | 'Blackbody' | 'Earth' | 'Electric' | 'Viridis' |
-            colorscale='YlGnBu',
-            reversescale=True,
-            color=[],
-            size=10,
-            colorbar=dict(
-                thickness=15,
-                title='Node Connections',
-                xanchor='left',
-                titleside='right'
-            ),
-            line_width=2))
-
-
 if __name__ == '__main__':
     cli()
+ 
