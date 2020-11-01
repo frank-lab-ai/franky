@@ -7,10 +7,12 @@ Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
 
 from datetime import datetime
 import numpy as np
+import pandas as pd
 import math
 from frank.config import config
 import frank.uncertainty.sourcePrior as sourcePrior
 from frank.kb import mongo
+import frank.dataloader
 
 # client = MongoClient(host=config["mongo_host"], port=config["mongo_port"])
 client = mongo.getClient()
@@ -35,6 +37,27 @@ class SourcePrior():
         """
         if config["update_priors"] == False or self.source == "":
             return
+        if config["use_db"]:
+            return self.save_to_db()
+        else:   
+            df = frank.dataloader.load_source_priors()
+            columns = ['source','paramA','paramB','cov','lastModified']
+            data = [self.source, self.paramA, self.paramB, self.cov, self.lastModified.utcnow()]
+            res = df.loc[df.source == self.source]
+            if len(res) > 0:
+                result = df.loc[df.source == self.source, columns] = data
+            else:
+                df2 = pd.DataFrame([data], columns=columns)
+                df = df.append(df2, ignore_index=True)
+            frank.dataloader.save_source_priors(df)
+            return True
+
+    def save_to_db(self):
+        """
+        Save or update the prior object
+        """
+        if config["update_priors"] == False or self.source == "":
+            return
         # do upsert
         result = db[collectionName].update_one(
             {"source": self.source},
@@ -44,7 +67,30 @@ class SourcePrior():
         )
         return result
 
-    def getPrior(self, source: str):
+    def get_prior(self, source: str):
+        """
+        Retrieve a prior object for the requested knowledge source.
+        """
+        if config["use_db"]:
+            return self.getPrior_from_db()
+        else:   
+            prior = SourcePrior(source, mean=defaultParamA,
+                                variance=defaultParamB, cov=defaultCov)
+            df = frank.dataloader.load_source_priors()
+            results = df.loc[df.source == source, 
+                            ['source', 'paramA', 'paramB', 'cov']]
+            if len(results) > 0:
+                record = results.head().to_numpy()
+                prior.source = record[0][0]
+                prior.paramA = record[0][1]
+                prior.paramB = record[0][2]
+                prior.cov = record[0][3]
+            else:
+                # if no stored prior, save the default prior
+                self.save()
+            return prior
+
+    def get_prior_from_db(self, source: str):
         """
         Retrieve a prior object for the requested knowledge source.
         """
