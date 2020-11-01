@@ -10,12 +10,17 @@ A demo of this reference implementation of FRANK can be found at http://app.fran
 # Installation
 
 ## Requirements
-Requires Python 3.5 or higher. Python dependencies can be found in *`requirements.txt`*.
+* Requires Python 3.5 or higher. Python dependencies can be found in *`requirements.txt`*.
+
 
 ## External Dependencies
 FRANK requires the following third-party tools to run. For the **FRANK API**, the following are required:
-* MongoDB
 * spaCy: [Install](https://spacy.io/usage#installation) the [en_core_web_md](https://spacy.io/models/en#en_core_web_md) model.
+
+* To download the spaCy language model:
+```
+$ python -m spacy download en_core_web_sm
+```
 
 The configuration file `config.py` contains settings for running FRANK on your local computer and for running FRANK on the server.
 

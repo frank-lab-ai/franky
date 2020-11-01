@@ -1,0 +1,17 @@
+flask
+flask-cors
+flask_httpauth
+GPy
+keras
+matplotlib
+networkx
+neo4j
+numpy
+pandas
+plotly
+py2neo
+pymongo==3.10.1
+redis
+sklearn
+spacy
+tensorflow
