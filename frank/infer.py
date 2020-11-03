@@ -125,7 +125,7 @@ class Infer:
         curr_propagated_alists = []
         self.max_depth = alist.depth
         if alist.state is states.PRUNED:
-            self.write_trace(f"{pcol.RED}ignore pruned:>> {alist.id}{pcol.RESET}-{alist}{pcol.RESETALL}")
+            self.write_trace(f"{pcol.RED}ignore pruned {alist.id}{pcol.RESET}-{alist}{pcol.RESETALL}")
             return propagated_alists
 
         bool_result = False
@@ -169,8 +169,8 @@ class Infer:
 
             if is_propagated:
                 prop_alist = self.G.alist(self.root.id)
-                self.write_trace(f"{pcol.CYAN}intermediate ans:>> " \
-                                 f"{prop_alist.id}{pcol.RESET}-{prop_alist}{pcol.RESETALL}", 
+                self.write_trace(f"{pcol.CYAN}intermediate ans: " \
+                                 f"{pcol.RESET}-{prop_alist}{pcol.RESETALL}", 
                     loglevel=processLog.LogLevel.ANSWER)
                 curr_propagated_alists.append(prop_alist.copy())
                 self.propagated_alists.append(prop_alist.copy())
@@ -194,7 +194,7 @@ class Infer:
         
         """
         self.last_heartbeat = time.time()
-        self.write_trace(f"{pcol.MAGENTA}search:>> {alist.id}{pcol.RESET} {alist}{pcol.RESETALL}")
+        self.write_trace(f"{pcol.MAGENTA}search {alist.id}{pcol.RESET} {alist}{pcol.RESETALL}")
         if alist.state == states.EXPLORED:
             new_alist = alist.copy()
             new_alist.state = states.EXPLORED
@@ -266,7 +266,7 @@ class Infer:
                     #                                                         search_attributes=searchable_attr)
                     if cache_found_flag == True:
                         found_facts.append(results[0])
-                        self.write_trace(f'{pcol.MAGENTA}found:>>> cache{pcol.RESETALL}')
+                        self.write_trace(f'{pcol.MAGENTA}found: cache{pcol.RESETALL}')
                 # if not found_facts:
                 #     self.write_trace('found:>>> cache')
             if not cache_found_flag and prop_string in self.property_refs:
@@ -331,7 +331,7 @@ class Infer:
                 self.G.link(alist, ff, alist.parent_decomposition)
 
                 # fact is considered reduced
-                self.write_trace(f'  {pcol.MAGENTA}found:>>>{pcol.RESET} {str(ff)}{pcol.RESETALL}')
+                self.write_trace(f'  {pcol.MAGENTA}found:{pcol.RESET} {str(ff)}{pcol.RESETALL}')
         return len(found_facts) > 0
 
     def get_map_strategy(self, alist: Alist):
@@ -454,7 +454,7 @@ class Infer:
         """
         alist = self.G.alist(alist_id)
         self.last_heartbeat = time.time()
-        self.write_trace(f'{pcol.YELLOW}reducing: >><< {alist.id}{pcol.RESET}-{alist}{pcol.RESETALL}')
+        self.write_trace(f'{pcol.YELLOW}reducing {alist.id}{pcol.RESET}-{alist}{pcol.RESETALL}')
 
         reduce_op = None
         try:
@@ -489,17 +489,17 @@ class Infer:
             alist.state = states.REDUCIBLE #check later
             self.G.add_alist(alist)
             self.explainer.what(self.G, alist, True)
-            self.write_trace(f"{pcol.GREEN}reduced:<< {alist.id}{pcol.RESET}-{alist}{pcol.RESETALL}")
+            self.write_trace(f"{pcol.GREEN}reduced {alist.id}{pcol.RESET}-{alist}{pcol.RESETALL}")
             return True
         else:
             self.explainer.what(self.G, alist, False)
-            self.write_trace(f"{pcol.YELLOW}reduce failed:<< {alist.id}{pcol.RESET}-{alist}{pcol.RESETALL}")
+            self.write_trace(f"{pcol.YELLOW}reduce {alist.id} failed {pcol.RESET}-{alist}{pcol.RESETALL}")
             return False
 
     def propagate(self, alist_id):
         self.last_heartbeat = time.time()
         curr_alist = self.G.alist(alist_id)
-        self.write_trace(f'{pcol.GREEN}propagate:^^ {curr_alist.id}{pcol.RESET}-{curr_alist}{pcol.RESETALL}')
+        self.write_trace(f'{pcol.GREEN}propagate {curr_alist.id}{pcol.RESET}-{curr_alist}{pcol.RESETALL}')
         # try:
         while self.G.parent_ids(curr_alist.id):
             # get parent alist and apply its reduce operation to its successors
