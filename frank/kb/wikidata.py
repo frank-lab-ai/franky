@@ -18,7 +18,6 @@ from datetime import datetime
 import frank.dataloader
 
 
-
 def search_properties(search_term):
     if config.config['use_db']:
         return search_db_properties(search_term)
