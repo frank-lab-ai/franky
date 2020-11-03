@@ -60,8 +60,8 @@ def cli(query="", context={}):
         launch.start(alist, session_id, inference_graphs)
 
         if session_id in inference_graphs:
-            graph = inference_graphs[session_id]['graph']
-            graph.plot_plotly()
+            graph:InferenceGraph = inference_graphs[session_id]['graph']
+            graph.plot_plotly(query)
         if interactive:
             input("\npress any key to exit")
     else:

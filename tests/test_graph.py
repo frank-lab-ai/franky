@@ -158,7 +158,7 @@ class Test_Graph(unittest.TestCase):
 
     def test_plot_plotly(self):
         G = self.create_graph2()
-        G.plot_plotly()
+        G.plot_plotly("Sub-title to test")
         self.assertTrue(True)
 
 if __name__ == '__main__':
