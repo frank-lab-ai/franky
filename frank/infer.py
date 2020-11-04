@@ -205,8 +205,8 @@ class Infer:
         prop_refs = []
         found_facts = []
         sources = {
-            'wikidata':wikidata
-            # ,'worldbank':worldbank
+            'wikidata':wikidata,
+            'worldbank':worldbank
             }
         for source_name, source in sources.items():
         # for source_name, source in {'worldbank':worldbank}.items():

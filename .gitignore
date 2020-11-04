@@ -6,3 +6,4 @@ logs/*
 *.http
 scratch
 data
+evaluation

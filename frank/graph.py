@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 from frank.alist import Alist
 from frank.alist import States as st
+from frank.alist import NodeTypes as nt
 
 
 class InferenceGraph(nx.DiGraph):
@@ -136,7 +137,7 @@ class InferenceGraph(nx.DiGraph):
         blanket = self.subgraph(nodes)
         return blanket
 
-    def plot_plotly(self):
+    def plot_plotly(self, subtitle=''):
         G = self
         pos = nx.spring_layout(G)
         edge_x = []
@@ -159,50 +160,74 @@ class InferenceGraph(nx.DiGraph):
 
         node_x = []
         node_y = []
+        node_alist = []
         node_alist_text = []
         for node in G.nodes():
             x, y = pos[node]
             node_x.append(x)
             node_y.append(y)
-            text = str(self.alist(node))
+            alist = self.alist(node)
+            node_alist.append(alist)
+            text = str(alist)
             text = text.replace(': {',': <br>{')
             node_alist_text.append(text)
 
+        node_adjacencies = []
+        node_text = []
+        colors = []
+        sizes = []
+        marker_symbols = []
+        pallette = {'grey':'#A5A5A5', 'orange':'#F28C02', 'cyan':'#0BE1DD', 'black':'#000000',}
+        for node, adjacencies in enumerate(G.adjacency()):
+            node_adjacencies.append(len(adjacencies[1]))
+            # node_text.append('# of connections: '+str(len(adjacencies[1])))
+            node_text.append(node_alist_text[node] ) #+ "<br># connections:" +str(len(adjacencies[1])))
+            alist = node_alist[node]
+            max_out_degree = min([len(adjacencies[1]),8]) # can have a max of 8
+
+            if alist.id == '0':
+                colors.append(pallette['cyan'])
+            elif alist.node_type == nt.FACT:
+                colors.append(pallette['black'])
+            elif alist.state == st.REDUCED:
+                colors.append(pallette['orange'])
+            else:
+                colors.append(pallette['grey'])
+            
+            if alist.node_type == nt.FACT:
+                sizes.append(10 + max_out_degree)
+                marker_symbols.append('circle-dot')
+            elif alist.node_type == nt.ZNODE:
+                sizes.append(12 + max_out_degree)
+                marker_symbols.append('circle')
+            elif alist.node_type == nt.HNODE:
+                sizes.append(12 + max_out_degree)
+                marker_symbols.append('square')
+
+            
         node_trace = go.Scatter(
             x=node_x, y=node_y,
             mode='markers',
             hoverinfo='text',
+            text= node_text,
             marker=dict(
-                showscale=True,
-                # colorscale options
-                #'Greys' | 'YlGnBu' | 'Greens' | 'YlOrRd' | 'Bluered' | 'RdBu' |
-                #'Reds' | 'Blues' | 'Picnic' | 'Rainbow' | 'Portland' | 'Jet' |
-                #'Hot' | 'Blackbody' | 'Earth' | 'Electric' | 'Viridis' |
+                symbol = marker_symbols,
+                # showscale=True,
                 colorscale='YlGnBu',
                 reversescale=True,
-                color=[],
-                size=10,
-                colorbar=dict(
-                    thickness=15,
-                    title='Node Connections',
-                    xanchor='left',
-                    titleside='right'
-                ),
-                line_width=2))
-
-        node_adjacencies = []
-        node_text = []
-        for node, adjacencies in enumerate(G.adjacency()):
-            node_adjacencies.append(len(adjacencies[1]))
-            # node_text.append('# of connections: '+str(len(adjacencies[1])))
-            node_text.append(node_alist_text[node] + "<br># connections:" +str(len(adjacencies[1])))
-
-        node_trace.marker.color = node_adjacencies
-        node_trace.text = node_text
+                color=colors,
+                size=sizes,
+                opacity=0.9,
+                line=dict(
+                    color='#6B6B6B',
+                    width=2
+                    )
+                )
+            )
 
         fig = go.Figure(data=[edge_trace, node_trace],
                     layout=go.Layout(
-                        title='FRANK Inference Graph',
+                        title=f'FRANK Inference Graph <br><span style="font-size:12px; margin-top:-5px">Q: {subtitle}</span>',
                         titlefont_size=16,
                         showlegend=False,
                         hovermode='closest',

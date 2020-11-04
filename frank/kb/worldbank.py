@@ -74,10 +74,11 @@ def find_property_object(alist: Alist):
             data = response.json()
             if len(data) > 1 and data[1]:
                 for d in data[1]:
-                    data_alist = alist.copy()
-                    data_alist.set(tt.OBJECT, d['value'])
-                    data_alist.data_sources = list(set(data_alist.data_sources + ['worldbank']))
-                    results.append(data_alist)
+                    if d['value']:
+                        data_alist = alist.copy()
+                        data_alist.set(tt.OBJECT, d['value'])
+                        data_alist.data_sources = list(set(data_alist.data_sources + ['worldbank']))
+                        results.append(data_alist)
         except Exception as ex:
             print("worldbank query response error: " + str(ex))
     except Exception as ex:
