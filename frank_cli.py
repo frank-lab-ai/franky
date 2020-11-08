@@ -1,7 +1,7 @@
 '''
 File: frank_api.py
 Description: REST-based API for FRANK
-Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
+
 
 '''
 
@@ -33,7 +33,7 @@ argparser.add_argument("-o", "--output", type=str,
     default="output.json", help="file to output batch query results to; (default = output.json)")
 
 
-def cli(query="", context={}):
+def cli(query, context={}):
     session_id = uuid.uuid4().hex
     interactive = False
     answer = None
@@ -47,8 +47,10 @@ def cli(query="", context={}):
         interactive = True
     
     # check if input is question or alist
-    if '{' in query and '"' in query:
+    if type(query) == str and '{' in query and '"' in query:
         query_json = json.loads(query)
+    elif type(query) == dict:
+        query_json = query
     else:
         parser = frank.query_parser.parser.Parser()
         parsedQuestion = parser.getNextSuggestion(query)
