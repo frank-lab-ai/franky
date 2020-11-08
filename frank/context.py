@@ -103,7 +103,7 @@ def inject_query_context(alist: Alist) -> Alist:
     user_place = get_env_context(alist, ctx.place)
     user_nationality = get_user_context(alist, ctx.nationality)
     s_context = {}
-    if user_place and alist.is_instantiated(tt.SUBJECT):
+    if user_place:
         if alist.get(tt.SUBJECT) == '':
             # if subject is empty, use place context
             alist.set(tt.SUBJECT, user_place)            
@@ -120,7 +120,7 @@ def inject_query_context(alist: Alist) -> Alist:
                                     
                 if not set_flag and locations and source_name in ['wikidata']: 
                     # if no location matched the nationality, use the first location
-                    s_context[source_name] = loc[0]
+                    s_context[source_name] = locations[0][0]
                     # set_query_context(alist, tt.SUBJECT, {source_name: locations[0][0]})
         else:
             for source_name, source in {'wikidata':wikidata, 'worldbank': worldbank}.items():
@@ -135,8 +135,8 @@ def inject_query_context(alist: Alist) -> Alist:
                 #     set_query_context(alist, tt.SUBJECT, s_context)
                 if not set_flag and locations and source_name in ['wikidata']:
                     # if no location matched the nationality, use the first location
-                    s_context[source_name] = loc[0]
-                    set_query_context(alist, tt.SUBJECT, {source_name: locations[0][0]})
+                    s_context[source_name] = locations[0][0]
+                    # set_query_context(alist, tt.SUBJECT, {source_name: locations[0][0]})
         if s_context:
             set_query_context(alist, tt.SUBJECT, s_context)
 
