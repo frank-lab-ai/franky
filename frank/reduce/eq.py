@@ -1,7 +1,7 @@
 '''
 File: eq.py
 Description: Equality reduce operation
-Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
+
 
 '''
 

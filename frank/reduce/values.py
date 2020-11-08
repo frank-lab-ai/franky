@@ -1,7 +1,7 @@
 '''
 File: values.py
 Description: Reduce operation that returns multiple values.
-Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
+
 
 '''
 

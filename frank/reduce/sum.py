@@ -1,7 +1,7 @@
 '''
 File: sum.py
 Description: Sum reduce operation
-Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
+
 
 '''
 

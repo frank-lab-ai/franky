@@ -1,7 +1,7 @@
 '''
 File: lt.py
 Description: less-than reduce operation
-Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
+
 
 '''
 

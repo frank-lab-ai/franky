@@ -1,7 +1,7 @@
 '''
 File: max.py
 Description: max reduce operation
-Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
+
 
 '''
 

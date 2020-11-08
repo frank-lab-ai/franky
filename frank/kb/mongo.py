@@ -1,7 +1,7 @@
 '''
 File: wikidata.py
 Description: Interface to Wikidata
-Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
+
 
 '''
 

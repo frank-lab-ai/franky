@@ -1,7 +1,7 @@
 '''
 File: geospatial.py
 Description: Geospatial decomposition of Alist
-Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
+
 
 '''
 

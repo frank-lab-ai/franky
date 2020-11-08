@@ -1,7 +1,7 @@
 '''
 File: frank_api.py
 Description: REST-based API for FRANK
-Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
+
 
 '''
 

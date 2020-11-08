@@ -1,7 +1,7 @@
 '''
 File: nnpredict.py
 Description: A neural network-based regression operation
-Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
+
 
 '''
 

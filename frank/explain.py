@@ -1,7 +1,7 @@
 '''
 File: explain.py
 Description: Generate explanations for alists and operations.
-Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
+
 
 '''
 

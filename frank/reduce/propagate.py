@@ -1,7 +1,7 @@
 '''
 File: propagate.py
 Description: Operation to propagate child alists to parents
-Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
+
 
 '''
 

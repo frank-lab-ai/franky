@@ -1,7 +1,7 @@
 '''
 File: gt.py
 Description: greater-than operation
-Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
+
 
 '''
 

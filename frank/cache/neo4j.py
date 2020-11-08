@@ -1,7 +1,7 @@
 '''
 File: neo4j.py
 Description: 
-Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
+
 
 '''
 

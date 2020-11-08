@@ -1,7 +1,7 @@
 '''
 File: inference.py
 Description: Core functions to the FRANK algorithm
-Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
+
 
 '''
 

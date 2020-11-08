@@ -1,7 +1,7 @@
 '''
 File: mode.py
 Description: mode reduce operation
-Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
+
 
 '''
 

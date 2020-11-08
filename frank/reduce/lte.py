@@ -1,7 +1,7 @@
 '''
 File: lte.py
 Description: less-than-or-equal-to reduce operation
-Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
+
 
 '''
 

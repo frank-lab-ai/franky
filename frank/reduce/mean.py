@@ -1,7 +1,7 @@
 '''
 File: mean.py
 Description: mean (average) reduce operation
-Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
+
 
 '''
 

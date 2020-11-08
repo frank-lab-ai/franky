@@ -1,7 +1,7 @@
 '''
 File: sparqlEndpoint.py
 Description: Interface to various SPARQL-based endpoints.
-Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
+
 
 '''
 

@@ -1,7 +1,7 @@
 '''
 File: temporal.py
 Description: Temporal decomposition of Alist
-Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
+
 
 '''
 

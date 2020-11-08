@@ -2,7 +2,7 @@
 '''
 File: graph.py
 Description: InferenceGraph for FRANK
-Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
+
 '''
 
 import networkx as nx

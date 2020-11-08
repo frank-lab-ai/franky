@@ -1,7 +1,7 @@
 '''
 File: regress.py
 Description: Linear regression reduce operation
-Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
+
 
 '''
 import numpy as np

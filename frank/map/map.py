@@ -1,7 +1,7 @@
 '''
 File: Map.py
 Description: Base class for map operations.
-Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
+
 '''
 import abc
 from abc import ABC, abstractmethod

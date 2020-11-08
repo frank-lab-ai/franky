@@ -1,7 +1,7 @@
 '''
 File: propertyPrior.py
 Description: Manage prior uncertainty for properties (or relations)
-Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
+
 
 '''
 

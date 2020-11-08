@@ -1,7 +1,7 @@
 '''
 File: aggregateUncertainty.py
 Description: Estimate uncertainty in a reduce operation given a list of alists to be reduced.
-Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
+
 
 '''
 import math

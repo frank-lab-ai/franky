@@ -1,7 +1,7 @@
 '''
 File: map_wrapper.py
 Description: A wrapper for various decomposition operations.
-Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
+
 
 '''
 

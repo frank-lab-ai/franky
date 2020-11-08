@@ -1,7 +1,7 @@
 '''
 File: parser.py
 Description: Template-based parser for NL queries.
-Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
+
 
 '''
 

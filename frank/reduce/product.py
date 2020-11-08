@@ -1,7 +1,7 @@
 '''
 File: product.py
 Description: Multiplication reduce operation
-Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
+
 
 '''
 from functools import reduce as ft_reduce

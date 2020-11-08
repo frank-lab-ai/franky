@@ -1,7 +1,7 @@
 '''
 File: alist.py
 Description: Alist class and functions
-Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
+
 
 '''
 

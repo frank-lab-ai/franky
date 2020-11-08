@@ -1,7 +1,7 @@
 '''
 File: worldbank.py
 Description: Interface to the World Bank dataset.
-Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
+
 
 '''
 

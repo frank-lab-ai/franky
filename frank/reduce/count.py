@@ -1,7 +1,7 @@
 '''
 File: count.py
 Description: Count reduce operation
-Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
+
 
 '''
 

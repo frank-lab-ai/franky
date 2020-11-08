@@ -1,7 +1,7 @@
 '''
 File: comp.py
 Description: Set comprehension reduce operation
-Author: Kobby K.A. Nuamah (knuamah@ed.ac.uk)
+
 
 '''
 
