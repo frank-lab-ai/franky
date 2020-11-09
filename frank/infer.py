@@ -43,6 +43,7 @@ from .explain import Explanation
 from frank import processLog
 from frank.uncertainty.sourcePrior import SourcePrior as sourcePrior
 import frank.context
+from frank.alist import Contexts as ctx
 from frank.graph import InferenceGraph
 
 
@@ -205,11 +206,17 @@ class Infer:
         prop_refs = []
         found_facts = []
         sources = {
-            'wikidata':wikidata,
-            'worldbank':worldbank
+            'wikidata':{'fn': wikidata, 'trust': 'low'},
+            'worldbank': {'fn': worldbank, 'trust': 'high'}
             }
+        context = alist.get(tt.CONTEXT)
+        context_store = {**context[0], **context[1], **context[2]}
         for source_name, source in sources.items():
-        # for source_name, source in {'worldbank':worldbank}.items():
+            # check context for trust
+            if ctx.trust in context_store:
+                if context_store[ctx.trust] == 'high' and source['trust'] != 'high':
+                    continue
+            # for source_name, source in {'worldbank':worldbank}.items():
             search_alist = alist.copy()
             # inject context into IR
             search_alist = frank.context.inject_retrieval_context(search_alist, source_name)
@@ -223,7 +230,7 @@ class Infer:
             if (prop_string not in self.property_refs and not prop_string.startswith('__') ) \
                 or (prop_string in self.property_refs and source_name not in prop_sources):
 
-                props = source.search_properties(prop_string)
+                props = source['fn'].search_properties(prop_string)
                 
                 if len(props) > 0:             
                     maxScore = 0
@@ -277,7 +284,7 @@ class Infer:
                     try:
                         if _source_name == source_name:
                             search_alist.set(tt.PROPERTY, propid_label[0])
-                            found_facts.extend(source.find_property_values(
+                            found_facts.extend(source['fn'].find_property_values(
                                     search_alist, search_attr))
                             # TODO: handle location search in less adhoc manner
                             if alist.get(tt.PROPERTY).lower() == "location":
