@@ -46,9 +46,9 @@ class Temporal(Map):
                         # increase number of data points for regression
                         branch_factor = 20
         
-            if context[1] and ctx.datetime in context[1]:
-                # use the ctx.datetime as current year if specified in context
-                current_year = datetime.datetime.strptime(context[1][ctx.datetime], '%Y-%m-%d %H:%M:%S').year
+            # if context[1] and ctx.datetime in context[1]:
+            #     # use the ctx.datetime as current year if specified in context
+            #     current_year = datetime.datetime.strptime(context[1][ctx.datetime], '%Y-%m-%d %H:%M:%S').year
 
         # flush context: needed to clear any query time context value 
         #   whose corresponding alist attribute (t) has been modified
