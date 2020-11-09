@@ -373,9 +373,9 @@ class Explanation():
             elif alist.get(tt.OP) in ['comp']:
                 what = f"Failed to solve the sub-problem. "
             elif alist.get(tt.OP) in ['value', 'values']:
-                what = f"Failed to determine the {self.ops_text[alist.get(tt.OP)]} of {alist.get[tt.PROPERTY]}{time}."
+                what = f"Failed to determine the {self.ops_text[alist.get(tt.OP)]} of {alist.get(tt.PROPERTY)}{time}."
             else:
-                what = f"Failed to calculate the {self.ops_text[alist.get(tt.OP)]} of {alist.get[tt.PROPERTY]}{time}."
+                what = f"Failed to calculate the {self.ops_text[alist.get(tt.OP)]} of {alist.get(tt.PROPERTY)}{time}."
 
         else:
             if alist.get(tt.OP) in ['eq', 'gt', 'gte', 'lt', 'lte']:
