@@ -65,7 +65,7 @@ def inject_retrieval_context(alist: Alist, source) -> Alist:
         if a in context_store:
             if type(context_store[a]) is dict and source in context_store[a]:
                 alist.set(a, context_store[a][source])
-            else:
+            elif type(context_store[a]) is not dict:
                 alist.set(a, context_store[a])
     return alist
 
