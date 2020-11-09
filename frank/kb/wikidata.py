@@ -167,6 +167,12 @@ def find_property_object(alist: Alist):
             ctx = alist.get(tt.CONTEXT)
             ctx = {**ctx[0], **ctx[1], **ctx[2]} if ctx else {}
 
+        result_with_year = False
+        for d in data['results']['bindings']:
+            if 'year' in d:
+                result_with_year = True
+                break
+
         for d in data['results']['bindings']:
             # if alist has explicit time and no context, 
             # or has explicit time not from context 
@@ -187,7 +193,10 @@ def find_property_object(alist: Alist):
                 if (('year' in d) and (d['year']['value'] == alist.get(tt.TIME))) or  \
                     ((((('year' in d) and (d['year']['value'] != alist.get(tt.TIME))) and len(alist_arr) == 0) or  \
                     (('year' not in d) and len(alist_arr) == 0)) and \
-                    (alist.get(tt.TIME) == current_year and (not frank.util.utils.is_numeric(d['oLabel']['value'])))):
+                    (
+                        (alist.get(tt.TIME) == current_year and (not frank.util.utils.is_numeric(d['oLabel']['value']))) or \
+                        (alist.get(tt.TIME) == ctx[tt.TIME] and result_with_year == False)
+                    )):
                         # last condition: append this value only if time (i.e the context time) is the current year and the data value is not numeric.                        
 
                         data_alist = alist.copy()
