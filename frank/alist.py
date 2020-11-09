@@ -335,6 +335,7 @@ class Contexts:
     nationality = 'nationality'
     accuracy = 'accuracy'
     speed = 'speed'
+    trust = 'trust'
 
     # environment contexts
     datetime = 'datetime'
