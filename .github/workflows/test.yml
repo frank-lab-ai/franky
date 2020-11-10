@@ -1,0 +1,23 @@
+name: Deploy
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8.6
+      - name: Install dependencies
+        run: pip install -r requirements.txt --use-feature=2020-resolver
+      - name: Install external dependencies
+        run: python -m spacy download en_core_web_sm
+      - name: Run example query
+        run: python frank_cli.py -q 'What is the population of Finland in 2019?'
