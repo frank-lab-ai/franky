@@ -24,7 +24,7 @@ $ pip install -r requirements.txt --use-feature=2020-resolver
 
 FRANK requires the following third-party tools to run. For the **FRANK API**, the following are required:
 
-- spaCy: [Install](https://spacy.io/usage#installation) the [en_core_web_md](https://spacy.io/models/en#en_core_web_md) model.
+- spaCy: [Install](https://spacy.io/usage#installation) the [en_core_web_sm](https://spacy.io/models/en#en_core_web_sm) model.
 
 - To download the spaCy language model:
 
