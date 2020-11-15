@@ -16,6 +16,7 @@ from frank.util import utils
 from frank.uncertainty.aggregateUncertainty import estimate_uncertainty
 from frank.graph import InferenceGraph
 
+
 def projections(parent: Alist, alists_to_propagate):
     ''' propagate projection from selected child alist to its parent [in place]'''
 

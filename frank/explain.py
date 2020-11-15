@@ -25,8 +25,8 @@ class Explanation():
                          'nnpredict': 'predicted value', 'comp': 'value',
                          'values': 'values', 'eq': 'equal to', 'gt': 'greater than', 'gte': 'greater than or equal to',
                          'lt': 'less than', 'lte': 'less than or equal to'}
-  
-    def generateExplanation(self, G:InferenceGraph, node_id, descendant_blanket_length=1, ancestor_blanket_length=1):
+
+    def generateExplanation(self, G: InferenceGraph, node_id, descendant_blanket_length=1, ancestor_blanket_length=1):
         ''' Generate explanation of a node given its blanket'''
 
         '''
@@ -71,9 +71,9 @@ class Explanation():
         if not n_star:
             return ''
         ancestors = self.ancestor_explanation(G,
-            n_star, "", int(ancestor_blanket_length), 1).strip()
+                                              n_star, "", int(ancestor_blanket_length), 1).strip()
         descendants = self.descendant_explanation(G,
-            n_star, "", int(descendant_blanket_length), 1).strip()
+                                                  n_star, "", int(descendant_blanket_length), 1).strip()
         self_exp = f"{n_star.get('what') if 'what' in n_star.attributes else ''} {n_star.get('how') if 'how' in n_star.attributes else ''} "
         sources = self.sources(n_star)
         explanation = {
@@ -315,7 +315,7 @@ class Explanation():
 
         return summary
 
-    def why(self, G:InferenceGraph,  alist: Alist, decomp_op, in_place=True):
+    def why(self, G: InferenceGraph,  alist: Alist, decomp_op, in_place=True):
         ''' Explain a decomposition of this alist. 
             Assumes a failed instantiation of this alist following KB searches'''
         expl = ""
@@ -428,7 +428,7 @@ class Explanation():
                 if alist.get(tt.OP) in ['regress', 'nnpredict', 'linregress', 'gpregress', 'nnregress']:
                     decomp_items = []
                     children = G.child_alists(alist.id)
-                    # for c in alist.children[0].children:                    
+                    # for c in alist.children[0].children:
                     for c in G.child_alists(children[0].id):
                         decomp_items.append(c.get(tt.TIME))
                     if len(decomp_items) > 0:
@@ -438,7 +438,6 @@ class Explanation():
             alist.set("what", what)
             alist.set("how", how)
             G.add_alist(alist)
-
 
     def sources(self, alist):
         sources = ''
@@ -450,20 +449,22 @@ class Explanation():
 
         return f"Retrieved fact(s) from the {sources} knowledge {'sources' if len(alist.data_sources) > 1 else 'source'}."
 
-    def ancestor_explanation(self, G:InferenceGraph, alist: Alist, summary, max_length, length):
+    def ancestor_explanation(self, G: InferenceGraph, alist: Alist, summary, max_length, length):
         if length <= max_length:
             # for parent in alist.parent:
             for parent in G.parent_alists(alist.id):
                 summary = f"{parent.get('why') if 'why' in parent.attributes else ''} {summary}".strip(
                 )
-                summary = self.ancestor_explanation(G, parent, summary, max_length, length+1)
+                summary = self.ancestor_explanation(
+                    G, parent, summary, max_length, length+1)
         return summary
 
-    def descendant_explanation(self, G:InferenceGraph, alist: Alist, summary, max_length, length):
+    def descendant_explanation(self, G: InferenceGraph, alist: Alist, summary, max_length, length):
         if length <= max_length:
             # for child in alist.children:
             for child in G.child_alists(alist.id):
                 summary = f"{summary}{' ' + child.get('how') if 'how' in child.attributes else ''}" + \
                     f"{' ' + child.get('what') if 'what' in child.attributes else ''}".strip()
-                summary = self.descendant_explanation(G, child, summary, max_length, length+1)
+                summary = self.descendant_explanation(
+                    G, child, summary, max_length, length+1)
         return summary

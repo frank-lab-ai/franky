@@ -1,4 +1,4 @@
-#server config
+# server config
 server = {
     "frank_port": 9876,
     "mongo_host": "mongo",
@@ -12,26 +12,26 @@ server = {
     "neo4j_host": "neo4j",
     "neo4j_port": 7687,
     "neo4j_username": "neo4j",
-    "neo4j_password":"@neo4j123",
+    "neo4j_password": "@neo4j123",
     "max_depth": 20,
     "update_priors": True,
     "update_priors2": True,
-    "use_cache" : False,
+    "use_cache": False,
 
-    "visualize" : False,
-    "polynomial_degree" : 1,
+    "visualize": False,
+    "polynomial_degree": 1,
     "sparql_endpoint": "http://172.20.0.1:8890/sparql",
-    "thread_pool" : 1,
-    "log_level" : 10,
-    "answer_sigdig" : 4,
-    "errorbar_sigdig" : 2,
-    "launch_as" : "server",
+    "thread_pool": 1,
+    "log_level": 10,
+    "answer_sigdig": 4,
+    "errorbar_sigdig": 2,
+    "launch_as": "server",
     "temporal_branching_factor": 10,
     # decompositions allowed. 'normalize' is enabled by default. Options: [temporal, geospatial, isa]
-    "base_decompositions": ["temporal","geospatial"],
+    "base_decompositions": ["temporal", "geospatial"],
     "derived_decompositions": {
-        "geospatial" : ["join", ["isa", "partition"]],
-        "product": ["join", ["isa", "feature"] ]
+        "geospatial": ["join", ["isa", "partition"]],
+        "product": ["join", ["isa", "feature"]]
     },
     "use_db": False
 }
@@ -50,29 +50,29 @@ local = {
     "neo4j_host": "localhost",
     "neo4j_port": 7687,
     "neo4j_username": "neo4j",
-    "neo4j_password":"@neo4j123",
+    "neo4j_password": "@neo4j123",
     "max_depth": 20,
     "update_priors": True,
     "update_priors2": True,
-    "use_cache" : False,
+    "use_cache": False,
 
-    "visualize" : False,
-    "polynomial_degree" : 1,
+    "visualize": False,
+    "polynomial_degree": 1,
     "sparql_endpoint": "http://frank-qa.nuamah.com:8890/sparql",
-    "thread_pool" : 1,
-    "log_level" : 10,
-    "answer_sigdig" : 4,
-    "errorbar_sigdig" : 2,
-    "launch_as" : "server",
+    "thread_pool": 1,
+    "log_level": 10,
+    "answer_sigdig": 4,
+    "errorbar_sigdig": 2,
+    "launch_as": "server",
     "temporal_branching_factor": 10,
     # decompositions allowed. 'normalize' is enabled by default. Options: [temporal, geospatial, isa]
     "base_decompositions": ["temporal"],
     "derived_decompositions": {
-        "geospatial" : ["join", ["isa", "partition"]],
-        "product": ["join", ["isa", "feature"] ]
+        "geospatial": ["join", ["isa", "partition"]],
+        "product": ["join", ["isa", "feature"]]
     },
     "use_db": False
 }
 
 # set to local or server
-config = local 
+config = local

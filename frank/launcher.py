@@ -21,6 +21,7 @@ from frank.graph import InferenceGraph
 from frank.processLog import pcolors as pcol
 import frank.context
 
+
 class Launcher():
 
     def __init__(self, **kwargs):
@@ -36,7 +37,7 @@ class Launcher():
         self.frank_infer.session_id = session_id
         self.inference_graphs = inference_graphs
         self.start_time = time.time()
-        self.frank_infer.last_heartbeat = time.time()        
+        self.frank_infer.last_heartbeat = time.time()
         alist = frank.context.inject_query_context(alist)
         self.frank_infer.enqueue_root(alist)
         self.schedule(-1)
@@ -44,7 +45,8 @@ class Launcher():
     def api_start(self, alist_obj, session_id, inference_graphs):
 
         a = Alist(**alist_obj)
-        t = threading.Thread(target=self.start, args=(a, session_id, inference_graphs))
+        t = threading.Thread(target=self.start, args=(
+            a, session_id, inference_graphs))
         t.start()
         return session_id
 
@@ -55,7 +57,7 @@ class Launcher():
         if time.time() - self.frank_infer.last_heartbeat > self.timeout:
             # stop and print any answer found
             self.cache_and_print_answer(True)
-        
+
         max_prop_depth_diff = 1
         stop_flag = False
         while True:
@@ -63,52 +65,54 @@ class Launcher():
                 self.inference_graphs[self.frank_infer.session_id]['graph'] = self.frank_infer.G
             else:
                 self.inference_graphs[self.frank_infer.session_id] = {
-                    'graph': self.frank_infer.G, 
+                    'graph': self.frank_infer.G,
                     'intermediate_answer': None,
                     'answer': None,
                 }
             flag = False
             # first check if there are any leaf nodes that can be reduced
-            reducible = self.frank_infer.G.frontier(state=states.REDUCIBLE, update_state=False)
+            reducible = self.frank_infer.G.frontier(
+                state=states.REDUCIBLE, update_state=False)
             if reducible:
                 propagatedToRoot = self.frank_infer.run_frank(reducible[0])
                 if propagatedToRoot:
-                    self.cache_and_print_answer(False)                    
+                    self.cache_and_print_answer(False)
                     flag = True
-                
+
             if not flag:
                 # check if there are any unexplored leaf nodes
-                unexplored = self.frank_infer.G.frontier(state=states.UNEXPLORED)
+                unexplored = self.frank_infer.G.frontier(
+                    state=states.UNEXPLORED)
                 if unexplored and last_root_prop_depth > 0 and (unexplored[0].depth > last_root_prop_depth + max_prop_depth_diff):
                     stop_flag = True
                     break
                 if unexplored:
-                    propagatedToRoot = self.frank_infer.run_frank(unexplored[0])
+                    propagatedToRoot = self.frank_infer.run_frank(
+                        unexplored[0])
                     if propagatedToRoot:
                         last_root_prop_depth = unexplored[0].depth
                         self.cache_and_print_answer(False)
-                        flag = True            
+                        flag = True
             if not flag:
-                break  
+                break
 
         if stop_flag:
-            self.cache_and_print_answer(True)   
+            self.cache_and_print_answer(True)
         else:
-            # if no answer has been propagated to root and        
+            # if no answer has been propagated to root and
             if time.time() - self.frank_infer.last_heartbeat <= self.timeout:
                 time.sleep(3)
-            
+
             if self.frank_infer.G.frontier(update_state=False):
                 self.schedule(last_root_prop_depth)
             else:
                 # stop and print any answer found
                 self.cache_and_print_answer(True)
 
-
     def cache_and_print_answer(self, isFinal=False):
         elapsed_time = time.time() - self.start_time
         answer = 'No answer found'
-        
+
         if self.frank_infer.propagated_alists:
             latest_root = self.frank_infer.propagated_alists[-1]
 
@@ -146,16 +150,17 @@ class Launcher():
                        "elapsed_time": f"{round(elapsed_time)}s",
                        "alist": self.frank_infer.propagated_alists[-1].attributes
                        }
-            
+
             self.inference_graphs[self.frank_infer.session_id] = {
-                'graph': self.frank_infer.G, 
+                'graph': self.frank_infer.G,
                 'intermediate_answer': ans_obj,
                 'answer': ans_obj if isFinal else None,
             }
 
             if isFinal:
-                print(f"\n{pcol.CYAN}Answer alist{pcol.RESETALL} \n" + json.dumps(ans_obj, indent=2))
+                print(f"\n{pcol.CYAN}Answer alist{pcol.RESETALL} \n" +
+                      json.dumps(ans_obj, indent=2))
 
 # if __name__ == '__main__':
-#     launcher = Launcher()    
+#     launcher = Launcher()
 #     launcher.cli()

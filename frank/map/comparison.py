@@ -20,7 +20,7 @@ class Comparison(Map):
     def __init__(self):
         pass
 
-    def decompose(self, alist: A, G:InferenceGraph ):
+    def decompose(self, alist: A, G: InferenceGraph):
 
         # check for comparison operations: eq, lt, gt, lte, gte and for multiple variables in operation variable
         if alist.get(tt.OP).lower() in ['eq', 'lt', 'gt', 'lte', 'gte'] \

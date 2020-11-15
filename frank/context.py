@@ -21,6 +21,7 @@ def get_env_context(alist, key):
 def set_env_context(alist, key, value):
     _set_context(alist, 1, key, value)
 
+
 def get_query_context(alist, key):
     return _get_context(alist, 2, key)
 
@@ -34,7 +35,7 @@ def _get_context(alist: Alist, idx, key):
         return None
     try:
         if key in alist.attributes[tt.CONTEXT][idx]:
-            return alist.attributes[tt.CONTEXT][idx][key] 
+            return alist.attributes[tt.CONTEXT][idx][key]
         else:
             return None
     except:
@@ -54,7 +55,7 @@ def inject_retrieval_context(alist: Alist, source) -> Alist:
     """
     Inject context values into alist attributes to be used for Information Retrieval from KBs.
     """
-    
+
     context = alist.get(tt.CONTEXT)
     if not context:
         return alist
@@ -107,25 +108,27 @@ def inject_query_context(alist: Alist) -> Alist:
     if user_place:
         if alist.get(tt.SUBJECT) == '':
             # if subject is empty, use place context
-            alist.set(tt.SUBJECT, user_place)            
-            for source_name, source in {'wikidata':wikidata, 'worldbank': worldbank}.items():
-                locations = source.find_location_of_entity(alist.get(tt.SUBJECT))
+            alist.set(tt.SUBJECT, user_place)
+            for source_name, source in {'wikidata': wikidata, 'worldbank': worldbank}.items():
+                locations = source.find_location_of_entity(
+                    alist.get(tt.SUBJECT))
                 set_flag = False
                 # use nationality as context for the user's location if no subject
                 if user_nationality:
                     for loc in locations:
-                        if user_nationality == loc[2]:                            
+                        if user_nationality == loc[2]:
                             s_context[source_name] = loc[0]
                             set_flag = True
                             break
-                                    
-                if not set_flag and locations and source_name in ['wikidata']: 
+
+                if not set_flag and locations and source_name in ['wikidata']:
                     # if no location matched the nationality, use the first location
                     s_context[source_name] = locations[0][0]
                     # set_query_context(alist, tt.SUBJECT, {source_name: locations[0][0]})
         else:
-            for source_name, source in {'wikidata':wikidata, 'worldbank': worldbank}.items():
-                locations = source.find_location_of_entity(alist.get(tt.SUBJECT))
+            for source_name, source in {'wikidata': wikidata, 'worldbank': worldbank}.items():
+                locations = source.find_location_of_entity(
+                    alist.get(tt.SUBJECT))
                 set_flag = False
                 for loc in locations:
                     if user_place == loc[2]:

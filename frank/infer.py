@@ -47,14 +47,14 @@ from frank.alist import Contexts as ctx
 from frank.graph import InferenceGraph
 
 
-class Infer:    
+class Infer:
     """ 
     Resolve alists by infer projection variables in alist
 
     Attributes
     ----------
     G: InferenceGraph
-        
+
     session_id : str
 
     last_heartbeat : time
@@ -79,10 +79,10 @@ class Infer:
 
     explainer: Explanation
         An object to generate explanations.     
-    
+
     """
 
-    def __init__(self, G:InferenceGraph):
+    def __init__(self, G: InferenceGraph):
         """
         Parameters
         ----------
@@ -102,7 +102,6 @@ class Infer:
         """ Add alist as the root node of the inference graph"""
         self.root = alist
         self.G.add_alist(alist)
-
 
     def run_frank(self, alist: Alist):
         """ Run the FRANK algorithm for an alist
@@ -126,7 +125,8 @@ class Infer:
         curr_propagated_alists = []
         self.max_depth = alist.depth
         if alist.state is states.PRUNED:
-            self.write_trace(f"{pcol.RED}ignore pruned {alist.id}{pcol.RESET}-{alist}{pcol.RESETALL}")
+            self.write_trace(
+                f"{pcol.RED}ignore pruned {alist.id}{pcol.RESET}-{alist}{pcol.RESETALL}")
             return propagated_alists
 
         bool_result = False
@@ -170,9 +170,9 @@ class Infer:
 
             if is_propagated:
                 prop_alist = self.G.alist(self.root.id)
-                self.write_trace(f"{pcol.CYAN}intermediate ans: " \
-                                 f"{pcol.RESET}-{prop_alist}{pcol.RESETALL}", 
-                    loglevel=processLog.LogLevel.ANSWER)
+                self.write_trace(f"{pcol.CYAN}intermediate ans: "
+                                 f"{pcol.RESET}-{prop_alist}{pcol.RESETALL}",
+                                 loglevel=processLog.LogLevel.ANSWER)
                 curr_propagated_alists.append(prop_alist.copy())
                 self.propagated_alists.append(prop_alist.copy())
         else:
@@ -184,7 +184,7 @@ class Infer:
 
     def search_kb(self, alist: Alist):
         """ Search knowledge bases to instantiate variables in alist.
-        
+
         Args
         ----
         alist: Alist
@@ -192,23 +192,24 @@ class Infer:
         Return
         ------
         Returns `True` if variable instantiation is successful from a KB search.
-        
+
         """
         self.last_heartbeat = time.time()
-        self.write_trace(f"{pcol.MAGENTA}search {alist.id}{pcol.RESET} {alist}{pcol.RESETALL}")
+        self.write_trace(
+            f"{pcol.MAGENTA}search {alist.id}{pcol.RESET} {alist}{pcol.RESETALL}")
         if alist.state == states.EXPLORED:
             new_alist = alist.copy()
             new_alist.state = states.EXPLORED
             new_alist.set(tt.OPVAR, alist.get(tt.OPVAR))
             return True
-        
+
         prop_string = alist.get(tt.PROPERTY)
         prop_refs = []
         found_facts = []
         sources = {
-            'wikidata':{'fn': wikidata, 'trust': 'low'},
+            'wikidata': {'fn': wikidata, 'trust': 'low'},
             'worldbank': {'fn': worldbank, 'trust': 'high'}
-            }
+        }
         context = alist.get(tt.CONTEXT)
         context_store = {}
         # context_store = {**context[0], **context[1], **context[2]}
@@ -220,20 +221,21 @@ class Infer:
             # for source_name, source in {'worldbank':worldbank}.items():
             search_alist = alist.copy()
             # inject context into IR
-            search_alist = frank.context.inject_retrieval_context(search_alist, source_name)
-            
+            search_alist = frank.context.inject_retrieval_context(
+                search_alist, source_name)
+
             # if the property_refs does not contain an entry for the property in this alist
             # search KB for a ref for the property
             prop_sources = []
             if prop_string in self.property_refs:
                 prop_sources = [x[1] for x in self.property_refs[prop_string]]
 
-            if (prop_string not in self.property_refs and not prop_string.startswith('__') ) \
-                or (prop_string in self.property_refs and source_name not in prop_sources):
+            if (prop_string not in self.property_refs and not prop_string.startswith('__')) \
+                    or (prop_string in self.property_refs and source_name not in prop_sources):
 
                 props = source['fn'].search_properties(prop_string)
-                
-                if len(props) > 0:             
+
+                if len(props) > 0:
                     maxScore = 0
                     for p in props:
                         if p[2] >= maxScore:
@@ -244,7 +246,6 @@ class Infer:
                             break
                 self.property_refs[prop_string] = prop_refs
 
-            
             search_attr = tt.SUBJECT
             uninstantiated_variables = search_alist.uninstantiated_attributes()
             if tt.SUBJECT in uninstantiated_variables:
@@ -255,7 +256,7 @@ class Infer:
             cache_found_flag = False
             if config.config['use_cache']:
                 searchable_attr = list(filter(lambda x: x != search_attr,
-                                            [tt.SUBJECT, tt.PROPERTY, tt.OBJECT, tt.TIME]))
+                                              [tt.SUBJECT, tt.PROPERTY, tt.OBJECT, tt.TIME]))
                 # search with original property name
                 (cache_found_flag, results) = (False, [])
                 # (cache_found_flag, results) = frank.cache.neo4j.search_cache(alist_to_instantiate=search_alist,
@@ -274,19 +275,20 @@ class Infer:
                     #                                                         search_attributes=searchable_attr)
                     if cache_found_flag == True:
                         found_facts.append(results[0])
-                        self.write_trace(f'{pcol.MAGENTA}found: cache{pcol.RESETALL}')
+                        self.write_trace(
+                            f'{pcol.MAGENTA}found: cache{pcol.RESETALL}')
                 # if not found_facts:
                 #     self.write_trace('found:>>> cache')
             if not cache_found_flag and prop_string in self.property_refs:
                 # search for data for each property reference source
                 for propid_label, _source_name in self.property_refs[prop_string]:
                     self.last_heartbeat = time.time()
-                    
+
                     try:
                         if _source_name == source_name:
                             search_alist.set(tt.PROPERTY, propid_label[0])
                             found_facts.extend(source['fn'].find_property_values(
-                                    search_alist, search_attr))
+                                search_alist, search_attr))
                             # TODO: handle location search in less adhoc manner
                             if alist.get(tt.PROPERTY).lower() == "location":
                                 if search_attr == tt.SUBJECT:
@@ -297,7 +299,8 @@ class Infer:
                                         wikidata.part_of_relation_object(search_alist))
                             break
                     except Exception as ex:
-                        self.write_trace(f"{pcol.RED}Search Error{pcol.RESETALL}", processLog.LogLevel.ERROR)
+                        self.write_trace(
+                            f"{pcol.RED}Search Error{pcol.RESETALL}", processLog.LogLevel.ERROR)
                         print(str(ex))
             if not found_facts and alist.get(tt.PROPERTY).startswith('__geopolitical:'):
                 if search_attr == tt.SUBJECT:
@@ -333,18 +336,19 @@ class Infer:
                 if ff.get(tt.PROPERTY) in self.reverse_property_refs:
                     ff.set(tt.PROPERTY,
                            self.reverse_property_refs[ff.get(tt.PROPERTY)])
-                
-                alist.parent_decomposition = "Lookup"                
+
+                alist.parent_decomposition = "Lookup"
                 self.G.add_alist(alist)
                 self.G.link(alist, ff, alist.parent_decomposition)
 
                 # fact is considered reduced
-                self.write_trace(f'  {pcol.MAGENTA}found:{pcol.RESET} {str(ff)}{pcol.RESETALL}')
+                self.write_trace(
+                    f'  {pcol.MAGENTA}found:{pcol.RESET} {str(ff)}{pcol.RESETALL}')
         return len(found_facts) > 0
 
     def get_map_strategy(self, alist: Alist):
         """ Get decomposition rules to apply to an alist
-        
+
         Args
         ----
         alist : Alist
@@ -387,7 +391,7 @@ class Infer:
         ------
         alist: Alist
             Successor h-node alist that has z-node child alists
-        
+
         Notes
         -----
         z-nodes are alists that represent facts and contain variables that 
@@ -412,8 +416,8 @@ class Infer:
             return alist
 
         self.write_trace('{blue}{bold}T{thread}{reset} > {op}:{id}-{alist}{resetall}'.format(
-            blue=pcol.BLUE, reset=pcol.RESET, bold=pcol.RESET,resetall=pcol.RESETALL,
-            thread=threading.get_ident(), 
+            blue=pcol.BLUE, reset=pcol.RESET, bold=pcol.RESET, resetall=pcol.RESETALL,
+            thread=threading.get_ident(),
             op=map_op[1], alist=alist, id=alist.id))
         alist.branchType = br.OR
         child = map_op[0](alist, self.G)
@@ -421,18 +425,20 @@ class Infer:
         context = alist.get(tt.CONTEXT)
         self.last_heartbeat = time.time()
         if child is not None:
-            self.write_trace(f'{pcol.BLUE}>> {child.id}{pcol.RESET}-{str(child)}{pcol.RESETALL}')  
-            succ  = self.G.successors(child.id)
+            self.write_trace(
+                f'{pcol.BLUE}>> {child.id}{pcol.RESET}-{str(child)}{pcol.RESETALL}')
+            succ = self.G.successors(child.id)
             for node_id1 in succ:
                 grandchild = self.G.alist(node_id1)
-                self.write_trace(f'  {pcol.BLUE}>>> {grandchild.id}{pcol.RESET}-{str(grandchild)}{pcol.RESETALL}')
+                self.write_trace(
+                    f'  {pcol.BLUE}>>> {grandchild.id}{pcol.RESET}-{str(grandchild)}{pcol.RESETALL}')
                 reducibleCtr = 0
-                succ2  = self.G.successors(grandchild.id)
+                succ2 = self.G.successors(grandchild.id)
                 for node_id2 in succ2:
                     ggchild = self.G.alist(node_id2)
                     self.write_trace(
                         f'  {pcol.BLUE}>>> {ggchild.id}{pcol.RESET}-{str(ggchild)}{pcol.RESETALL}')
-                    if ggchild.state == states.REDUCIBLE:   
+                    if ggchild.state == states.REDUCIBLE:
                         self.G.add_alist(ggchild)
                         reducibleCtr += 1
             # generate the WHY explanation
@@ -449,7 +455,7 @@ class Infer:
         ----
         alist_id : str
             Id of alist whose child nodes should be aggregated
-        
+
         Return
         --------
         Returns True if aggregation was successful.  
@@ -462,7 +468,8 @@ class Infer:
         """
         alist = self.G.alist(alist_id)
         self.last_heartbeat = time.time()
-        self.write_trace(f'{pcol.YELLOW}reducing {alist.id}{pcol.RESET}-{alist}{pcol.RESETALL}')
+        self.write_trace(
+            f'{pcol.YELLOW}reducing {alist.id}{pcol.RESET}-{alist}{pcol.RESETALL}')
 
         reduce_op = None
         try:
@@ -471,13 +478,14 @@ class Infer:
             print(f"Cannot process {alist.get(tt.OP).lower()}")
 
         assert(reduce_op is not None)
-        
+
         children = self.G.child_alists(alist.id)
         reducibles = [x for x in children
-                      if (x.state == states.REDUCIBLE or x.state == states.REDUCED) 
-                          and x.get(tt.OP).lower() != 'comp']
+                      if (x.state == states.REDUCIBLE or x.state == states.REDUCED)
+                      and x.get(tt.OP).lower() != 'comp']
         for x in reducibles:
-            self.write_trace(f'  {pcol.YELLOW}<<< {x.id}{pcol.RESET}-{x}{pcol.RESETALL}')
+            self.write_trace(
+                f'  {pcol.YELLOW}<<< {x.id}{pcol.RESET}-{x}{pcol.RESETALL}')
 
         unexplored = [
             x for x in children if x.state == states.UNEXPLORED]
@@ -490,29 +498,33 @@ class Infer:
 
         if reducedAlist is not None:
             for c in children:
-                alist.data_sources = list(set(alist.data_sources + c.data_sources))
+                alist.data_sources = list(
+                    set(alist.data_sources + c.data_sources))
             for r in reducibles:
                 r.state = states.REDUCED
                 self.G.add_alist(r)
-            alist.state = states.REDUCIBLE #check later
+            alist.state = states.REDUCIBLE  # check later
             self.G.add_alist(alist)
             self.explainer.what(self.G, alist, True)
-            self.write_trace(f"{pcol.GREEN}reduced {alist.id}{pcol.RESET}-{alist}{pcol.RESETALL}")
+            self.write_trace(
+                f"{pcol.GREEN}reduced {alist.id}{pcol.RESET}-{alist}{pcol.RESETALL}")
             return True
         else:
             self.explainer.what(self.G, alist, False)
-            self.write_trace(f"{pcol.YELLOW}reduce {alist.id} failed {pcol.RESET}-{alist}{pcol.RESETALL}")
+            self.write_trace(
+                f"{pcol.YELLOW}reduce {alist.id} failed {pcol.RESET}-{alist}{pcol.RESETALL}")
             return False
 
     def propagate(self, alist_id):
         self.last_heartbeat = time.time()
         curr_alist = self.G.alist(alist_id)
-        self.write_trace(f'{pcol.GREEN}propagate {curr_alist.id}{pcol.RESET}-{curr_alist}{pcol.RESETALL}')
+        self.write_trace(
+            f'{pcol.GREEN}propagate {curr_alist.id}{pcol.RESET}-{curr_alist}{pcol.RESETALL}')
         # try:
         while self.G.parent_ids(curr_alist.id):
             # get parent alist and apply its reduce operation to its successors
             if self.aggregate(self.G.parent_ids(curr_alist.id)[0]):
-                # set the parent to the current alist and recurse 
+                # set the parent to the current alist and recurse
                 curr_alist = self.G.parent_alists(curr_alist.id)[0]
             else:
                 return False
