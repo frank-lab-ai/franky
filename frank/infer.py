@@ -210,7 +210,8 @@ class Infer:
             'worldbank': {'fn': worldbank, 'trust': 'high'}
             }
         context = alist.get(tt.CONTEXT)
-        context_store = {**context[0], **context[1], **context[2]}
+        context_store = {}
+        # context_store = {**context[0], **context[1], **context[2]}
         for source_name, source in sources.items():
             # check context for trust
             if ctx.trust in context_store:
