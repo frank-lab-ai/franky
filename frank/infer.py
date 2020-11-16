@@ -38,7 +38,7 @@ from frank.alist import Branching as br
 from frank.alist import NodeTypes as nt
 from frank.alist import States as states
 from frank import config
-from frank.kb import rdf, wikidata, worldbank
+from frank.kb import rdf, wikidata, worldbank, jsonld
 from .explain import Explanation
 from frank import processLog
 from frank.uncertainty.sourcePrior import SourcePrior as sourcePrior
@@ -208,7 +208,9 @@ class Infer:
         found_facts = []
         sources = {
             'wikidata': {'fn': wikidata, 'trust': 'low'},
-            'worldbank': {'fn': worldbank, 'trust': 'high'}
+            'worldbank': {'fn': worldbank, 'trust': 'high'},
+            'gregbrimblecom!': {'fn': jsonld.JSONLD.from_url('gregbrimblecom!', 'https://gregbrimble.com'), 'trust': 'high'},
+            'mozilla': {'fn': jsonld.JSONLD.from_url('mozilla', 'https://www.mozilla.org/en-GB/'), 'trust': 'high'}
         }
         context = alist.get(tt.CONTEXT)
         context_store = {}
