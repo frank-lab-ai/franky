@@ -62,7 +62,8 @@ def inject_retrieval_context(alist: Alist, source) -> Alist:
 
     context = alist.get(tt.CONTEXT)
     context_store = {}
-    # context_store = {**context[0], **context[1], **context[2]}
+    context_store = {**context[0], **context[1],
+                     **context[2]} if context else {}
     for a in alist.attributes.keys():
         if a in context_store:
             if type(context_store[a]) is dict and source in context_store[a]:
