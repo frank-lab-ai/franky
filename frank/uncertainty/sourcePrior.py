@@ -39,10 +39,11 @@ class SourcePrior():
             return
         if config["use_db"]:
             return self.save_to_db()
-        else:   
+        else:
             df = frank.dataloader.load_source_priors()
-            columns = ['source','paramA','paramB','cov','lastModified']
-            data = [self.source, self.paramA, self.paramB, self.cov, self.lastModified.utcnow()]
+            columns = ['source', 'paramA', 'paramB', 'cov', 'lastModified']
+            data = [self.source, self.paramA, self.paramB,
+                    self.cov, self.lastModified.utcnow()]
             res = df.loc[df.source == self.source]
             if len(res) > 0:
                 result = df.loc[df.source == self.source, columns] = data
@@ -73,12 +74,12 @@ class SourcePrior():
         """
         if config["use_db"]:
             return self.getPrior_from_db()
-        else:   
+        else:
             prior = SourcePrior(source, mean=defaultParamA,
                                 variance=defaultParamB, cov=defaultCov)
             df = frank.dataloader.load_source_priors()
-            results = df.loc[df.source == source, 
-                            ['source', 'paramA', 'paramB', 'cov']]
+            results = df.loc[df.source == source,
+                             ['source', 'paramA', 'paramB', 'cov']]
             if len(results) > 0:
                 record = results.head().to_numpy()
                 prior.source = record[0][0]

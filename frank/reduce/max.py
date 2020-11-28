@@ -17,6 +17,7 @@ from frank.uncertainty.aggregateUncertainty import estimate_uncertainty
 from frank.reduce import propagate
 from frank.graph import InferenceGraph
 
+
 def reduce(alist: Alist, children: List[Alist], G: InferenceGraph):
 
     data = {x: utils.get_number(x.instantiation_value(

@@ -17,6 +17,7 @@ from frank.uncertainty.aggregateUncertainty import estimate_uncertainty
 from frank.reduce import propagate
 from frank.graph import InferenceGraph
 
+
 def reduce(alist: Alist, children: List[Alist], G: InferenceGraph):
     # do comparisons
     vars_to_compare = alist.get(tt.OPVAR).split(' ')

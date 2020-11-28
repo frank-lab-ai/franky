@@ -23,7 +23,7 @@ from frank.graph import InferenceGraph
 
 class Temporal(Map):
 
-    def decompose(self, alist:A, G:InferenceGraph):
+    def decompose(self, alist: A, G: InferenceGraph):
         current_year = datetime.datetime.now().year
         branch_factor = config.config["temporal_branching_factor"]
         parent_year = None
@@ -42,18 +42,18 @@ class Temporal(Map):
             if context[0]:
                 if ctx.accuracy in context[0] and context[0][ctx.accuracy] == 'high':
                     op = 'gpregress'
-                    if branch_factor <= 10: 
+                    if branch_factor <= 10:
                         # increase number of data points for regression
                         branch_factor = 20
-        
+
             # if context[1] and ctx.datetime in context[1]:
             #     # use the ctx.datetime as current year if specified in context
             #     current_year = datetime.datetime.strptime(context[1][ctx.datetime], '%Y-%m-%d %H:%M:%S').year
 
-        # flush context: needed to clear any query time context value 
+        # flush context: needed to clear any query time context value
         #   whose corresponding alist attribute (t) has been modified
         frank.context.flush(op_alist, [tt.TIME])
-        
+
         op_alist.set(tt.OP, op)
         op_alist.cost = alist.cost + 2.0
         op_alist.branch_type = br.AND

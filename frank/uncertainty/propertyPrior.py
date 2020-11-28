@@ -32,7 +32,6 @@ class PropertyPrior():
         self.variance = variance
         self.lastModified = lastModified
 
-            
     def save(self):
         """
         Save or update the prior object
@@ -41,13 +40,16 @@ class PropertyPrior():
             return
         if config["use_db"]:
             return self.save_to_db()
-        else:   
+        else:
             df = frank.dataloader.load_predicate_priors()
-            columns = ['source','predicate','mean','variance','lastModified']
-            data = [self.source, self.property, self.mean, self.variance, self.lastModified.utcnow()]
-            res = df.loc[(df.source == self.source) & (df.predicate == self.property)]
+            columns = ['source', 'predicate',
+                       'mean', 'variance', 'lastModified']
+            data = [self.source, self.property, self.mean,
+                    self.variance, self.lastModified.utcnow()]
+            res = df.loc[(df.source == self.source) &
+                         (df.predicate == self.property)]
             if len(res) > 0:
-                result = df.loc[(df.source == self.source) & (df.predicate == self.property), 
+                result = df.loc[(df.source == self.source) & (df.predicate == self.property),
                                 columns] = data
             else:
                 df2 = pd.DataFrame([data], columns=columns)
@@ -77,12 +79,12 @@ class PropertyPrior():
         """
         if config["use_db"]:
             return self.getPrior_from_db()
-        else:   
+        else:
             prior = PropertyPrior(
-                        source, property, mean=defaultMean, variance=defaultVariance)
+                source, property, mean=defaultMean, variance=defaultVariance)
             df = frank.dataloader.load_predicate_priors()
-            results = df.loc[(df.source == source) & (df.predicate == property), 
-                          ['source','mean','variance']]
+            results = df.loc[(df.source == source) & (df.predicate == property),
+                             ['source', 'mean', 'variance']]
             if len(results) > 0:
                 record = results.head().to_numpy()
                 prior.source = record[0][0]
@@ -93,7 +95,6 @@ class PropertyPrior():
                 self.save()
             return prior
 
-    
     def get_prior_from_db(self, source: str, property: str):
         """
         Retrieve a prior object for the requested knowledge source.

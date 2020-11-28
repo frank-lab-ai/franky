@@ -29,16 +29,17 @@ indicators = {
 }
 
 common_synonyms = {
-        "People's Republic of China": "China",
-        "UK": "United Kingdom",
-        "USA": "United States of America"
-    }
+    "People's Republic of China": "China",
+    "UK": "United Kingdom",
+    "USA": "United States of America"
+}
 
 
 def search_properties(search_term):
     results = []
     if search_term in indicators:
-        results.append((indicators[search_term], search_term, 1)) #(property_id, label, match_score)
+        # (property_id, label, match_score)
+        results.append((indicators[search_term], search_term, 1))
     return results
 
 
@@ -58,7 +59,8 @@ def find_property_object(alist: Alist):
     results = []
     subj_instantiation = alist.instantiation_value(tt.SUBJECT)
     if isinstance(subj_instantiation, str):
-        country_id = getCountryPropertyDb(subj_instantiation.replace("_", " "), "id")
+        country_id = getCountryPropertyDb(
+            subj_instantiation.replace("_", " "), "id")
     else:
         return results
     if not country_id:
@@ -77,7 +79,8 @@ def find_property_object(alist: Alist):
                     if d['value']:
                         data_alist = alist.copy()
                         data_alist.set(tt.OBJECT, d['value'])
-                        data_alist.data_sources = list(set(data_alist.data_sources + ['worldbank']))
+                        data_alist.data_sources = list(
+                            set(data_alist.data_sources + ['worldbank']))
                         results.append(data_alist)
         except Exception as ex:
             print("worldbank query response error: " + str(ex))
@@ -102,14 +105,15 @@ def getCountryPropertyDb_db(countryName, countryProperty):
 
     return result
 
+
 def getCountryPropertyDb(countryName, countryProperty):
     if countryName in common_synonyms:
         countryName = common_synonyms[countryName]
     result = ''
-    
+
     if config.config['use_db']:
         return getCountryPropertyDb_db(countryName, countryProperty)
-    else:        
+    else:
         results = []
         df = frank.dataloader.load_worldbank_countries()
         df_filtered_prop = df[df['name'] == countryName][countryProperty]
@@ -117,6 +121,7 @@ def getCountryPropertyDb(countryName, countryProperty):
             result = df_filtered_prop.iloc[0]
 
         return result
+
 
 def find_location_of_entity_in_db(entity_name: str):
     """
@@ -133,7 +138,7 @@ def find_location_of_entity_in_db(entity_name: str):
             results.append((d['id'],
                             d['region']['id'],
                             d['region']['value']
-                           ))            
+                            ))
 
         db_result2 = db['wb_countries'].find({'capitalCity': entity_name})
         for d in db_result2:
@@ -143,14 +148,15 @@ def find_location_of_entity_in_db(entity_name: str):
         print('Error retreiving WB data from MongoDB: ' + str(ex.args))
     return results
 
+
 def find_location_of_entity(entity_name: str):
     if config.config['use_db']:
         return find_location_of_entity_in_db(entity_name)
-    else:        
+    else:
         results = []
         df = frank.dataloader.load_worldbank_countries()
         df_filtered = df[df['name'] == entity_name]
-        df_filtered  = df_filtered[['id','region.id','region.value']]
+        df_filtered = df_filtered[['id', 'region.id', 'region.value']]
         results = [tuple(x) for x in df_filtered.to_numpy()]
         # for d in df_filtered:
         #     results.append((d['id'],
@@ -159,10 +165,9 @@ def find_location_of_entity(entity_name: str):
         #                    ))
 
         df_filtered = df[df['capitalcity'] == entity_name]
-        df_filtered  = df_filtered[['id','name']]
+        df_filtered = df_filtered[['id', 'name']]
         result2 = [(entity_name, x[0], x[1]) for x in df_filtered.to_numpy()]
         results.extend(result2)
         # for d in df_filtered:
         #     results.append((entity_name, d['id'], d['name']))
         return results
-            

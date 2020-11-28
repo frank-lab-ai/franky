@@ -21,15 +21,17 @@ import frank.dataloader
 def search_properties(search_term):
     if config.config['use_db']:
         return search_db_properties(search_term)
-    else:        
+    else:
         df = frank.dataloader.load_wikidata_props()
-        df['score'] = df['label'].apply(lambda x: difflib.SequenceMatcher(None, search_term,x).ratio())
+        df['score'] = df['label'].apply(
+            lambda x: difflib.SequenceMatcher(None, search_term, x).ratio())
         df_sorted = df.sort_values(by=['score'], ascending=False)
         df_sorted = df_sorted[df_sorted['score'] > 0.8]
         if len(df_sorted) > 0:
             return [(df_sorted.iloc[0]['id'], df_sorted.iloc[0]['label'], df_sorted.iloc[0]['score'])]
         else:
-            return []   
+            return []
+
 
 def search_db_properties(search_term):
     results = []
@@ -123,7 +125,8 @@ def find_property_subject(alist: Alist):
             data_alist.set(tt.SUBJECT, d['sLabel']['value'])
             if 'year' in d:
                 data_alist.set(tt.TIME, d['year']['value'])
-            data_alist.data_sources= list(set(data_alist.data_sources + ['wikidata']))
+            data_alist.data_sources = list(
+                set(data_alist.data_sources + ['wikidata']))
             alist_arr.append(data_alist)
     except Exception as e:
         print("wikidata query response error: " + str(e))
@@ -135,14 +138,15 @@ def find_property_object(alist: Alist):
     entity_id = None
     wikidata_base_uri = 'http://www.wikidata.org/entity/'
     if 'http://www.wikidata.org/entity/' in alist.instantiation_value(tt.SUBJECT):
-        entity_id = alist.instantiation_value(tt.SUBJECT)[len(wikidata_base_uri):]
+        entity_id = alist.instantiation_value(
+            tt.SUBJECT)[len(wikidata_base_uri):]
     else:
         entity_id = find_entity(alist.instantiation_value(tt.SUBJECT))
         if not entity_id:
             return []
 
     # compose wikidata query
-    query="""
+    query = """
         SELECT DISTINCT ?oLabel (YEAR(?date) as ?year) WHERE {{
             wd:{entity_id} p:{property_id} ?ob .
             ?ob ps:{property_id} ?o .
@@ -152,9 +156,9 @@ def find_property_object(alist: Alist):
             SERVICE wikibase:label {{  bd:serviceParam wikibase:language "en" .  }}  }}
             ORDER By DESC(?year)
         """.format(
-                entity_id=entity_id,
-                property_id=alist.get(tt.PROPERTY),
-                time=alist.get(tt.TIME).replace(".0", "") if alist.get(tt.TIME) else '0')
+        entity_id=entity_id,
+        property_id=alist.get(tt.PROPERTY),
+        time=alist.get(tt.TIME).replace(".0", "") if alist.get(tt.TIME) else '0')
 
     params = {'format': 'json', 'query': query}
     response = requests.get(
@@ -174,43 +178,47 @@ def find_property_object(alist: Alist):
                 break
 
         for d in data['results']['bindings']:
-            # if alist has explicit time and no context, 
-            # or has explicit time not from context 
+            # if alist has explicit time and no context,
+            # or has explicit time not from context
             # then result must include time
-            if (alist.get(tt.TIME) and tt.TIME not in ctx): 
+            if (alist.get(tt.TIME) and tt.TIME not in ctx):
                 if ('year' in d) and (d['year']['value'] == alist.get(tt.TIME)):
                     data_alist = alist.copy()
-                    data_alist.set(tt.OBJECT, d['oLabel']['value'])                    
+                    data_alist.set(tt.OBJECT, d['oLabel']['value'])
                     data_alist.set(tt.TIME, d['year']['value'])
-                    data_alist.data_sources= list(set(data_alist.data_sources + ['wikidata']))
+                    data_alist.data_sources = list(
+                        set(data_alist.data_sources + ['wikidata']))
                     alist_arr.append(data_alist)
 
             # else if time is injected from context
             # then only append results that have no time only if the dataset is empty..
-            ## wikidata returns bindings with the time attribute first so this works
-            elif alist.get(tt.TIME) and tt.TIME in ctx: 
+            # wikidata returns bindings with the time attribute first so this works
+            elif alist.get(tt.TIME) and tt.TIME in ctx:
                 current_year = str(datetime.now().year)
                 if (('year' in d) and (d['year']['value'] == alist.get(tt.TIME))) or  \
-                    ((((('year' in d) and (d['year']['value'] != alist.get(tt.TIME))) and len(alist_arr) == 0) or  \
-                    (('year' not in d) and len(alist_arr) == 0)) and \
-                    (
-                        (alist.get(tt.TIME) == current_year and (not frank.util.utils.is_numeric(d['oLabel']['value']))) or \
-                        (alist.get(tt.TIME) == ctx[tt.TIME] and result_with_year == False)
-                    )):
-                        # last condition: append this value only if time (i.e the context time) is the current year and the data value is not numeric.                        
+                        ((((('year' in d) and (d['year']['value'] != alist.get(tt.TIME))) and len(alist_arr) == 0) or
+                          (('year' not in d) and len(alist_arr) == 0)) and
+                         (
+                            (alist.get(tt.TIME) == current_year and (not frank.util.utils.is_numeric(d['oLabel']['value']))) or
+                            (alist.get(tt.TIME) ==
+                             ctx[tt.TIME] and result_with_year == False)
+                        )):
+                    # last condition: append this value only if time (i.e the context time) is the current year and the data value is not numeric.
 
-                        data_alist = alist.copy()
-                        data_alist.set(tt.OBJECT, d['oLabel']['value'])                    
-                        # if 'year' in d: # use time in dataset optionally
-                        #     data_alist.set(tt.TIME, d['year']['value'])                    
-                        data_alist.data_sources= list(set(data_alist.data_sources + ['wikidata']))
-                        alist_arr.append(data_alist)
+                    data_alist = alist.copy()
+                    data_alist.set(tt.OBJECT, d['oLabel']['value'])
+                    # if 'year' in d: # use time in dataset optionally
+                    #     data_alist.set(tt.TIME, d['year']['value'])
+                    data_alist.data_sources = list(
+                        set(data_alist.data_sources + ['wikidata']))
+                    alist_arr.append(data_alist)
             else:
                 data_alist = alist.copy()
                 data_alist.set(tt.OBJECT, d['oLabel']['value'])
                 # if 'year' in d: # use time in dataset optionally
                 #     data_alist.set(tt.TIME, d['year']['value'])
-                data_alist.data_sources= list(set(data_alist.data_sources + ['wikidata']))
+                data_alist.data_sources = list(
+                    set(data_alist.data_sources + ['wikidata']))
                 alist_arr.append(data_alist)
 
     except Exception as ex:
@@ -379,7 +387,7 @@ def _part_of_relation_subject(entity_name: str, relationName: str):
             f = Alist(**{tt.PROPERTY: 'P30', tt.OBJECT: entity_name})
             results = [x.get(tt.SUBJECT) for x in find_property_subject(f)]
             return results
-        elif len(set(['country','sovereign state']) & set(entityType)) > 0  and relationName.lower() == 'location':
+        elif len(set(['country', 'sovereign state']) & set(entityType)) > 0 and relationName.lower() == 'location':
             f = Alist(**{tt.PROPERTY: 'P131', tt.OBJECT: entity_name})
             results = [x.get(tt.SUBJECT) for x in find_property_subject(f)]
             return results
@@ -393,7 +401,8 @@ def part_of_relation_subject(alist: Alist):
     results = []
     for r in _part_of_relation_subject(alist.get(tt.OBJECT), "location"):
         fact_alist = alist.copy()
-        fact_alist.data_sources= list(set(fact_alist.data_sources + ['wikidata']))
+        fact_alist.data_sources = list(
+            set(fact_alist.data_sources + ['wikidata']))
         fact_alist.set(tt.SUBJECT, r)
         results.append(fact_alist)
     return results
@@ -425,7 +434,8 @@ def part_of_relation_object(alist: Alist):
     results = []
     for r in _part_of_relation_object(alist.get(tt.SUBJECT), "location"):
         fact_alist = alist.copy()
-        fact_alist.data_sources= list(set(fact_alist.data_sources + ['wikidata']))
+        fact_alist.data_sources = list(
+            set(fact_alist.data_sources + ['wikidata']))
         fact_alist.set(tt.OBJECT, r)
         results.append(fact_alist)
     return results
@@ -436,10 +446,12 @@ def part_of_geopolitical_subject(alist: Alist):
     geopolitical_type = alist.get(tt.PROPERTY).split(':')
     for r in find_geopolitical_subelements(alist.get(tt.OBJECT), geopolitical_type[-1]):
         fact_alist = alist.copy()
-        fact_alist.data_sources= list(set(fact_alist.data_sources + ['wikidata']))
+        fact_alist.data_sources = list(
+            set(fact_alist.data_sources + ['wikidata']))
         fact_alist.set(tt.SUBJECT, r)
         results.append(fact_alist)
     return results
+
 
 def find_location_of_entity(entity_name: str):
     """
@@ -471,7 +483,7 @@ def find_location_of_entity(entity_name: str):
                 results.append((d['entity']['value'],
                                 d['location']['value'],
                                 d['locationLabel']['value']
-                            ))
+                                ))
     except Exception:
         print("wikidata query response error")
     return results

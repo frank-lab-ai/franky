@@ -305,13 +305,13 @@ class Parser:
         # print(_attr_value)
         kv_pairs = {'': _attr_value}
         for attr, attr_val in kv_pairs.items():
-            #print("***")
-            #print(attr_val)
+            # print("***")
+            # print(attr_val)
             if len(attr_val.split()) < 1 and not isinstance(attr_val, dict) and not isinstance(attr_val, list):
                 continue
 
             for reg_items in regex_patterns:
-                #print(reg_items)
+                # print(reg_items)
                 idx = reg_items[0]
                 pattn = reg_items[1]
                 re.purge()
@@ -319,7 +319,7 @@ class Parser:
                 m = p.match(attr_val.strip())
                 s = p.sub('#', attr_val)
                 if m is not None and s == '#':
-                    #print("matched...")
+                    # print("matched...")
                     matched_pattern = idx
                     curr_alist = alist_patterns[idx]
                     #curr_alist['pattern'] = idx
@@ -331,16 +331,16 @@ class Parser:
                                 token_idx = matched_str.split('-')
 
                                 if len(token_idx) == 2 and not (matched_pattern in [70, 75] and group_name == "entity"):
-                                    #print("---")
-                                    #print(group_name)
-                                    #print(matched_str)
-                                    #print(token_idx)
+                                    # print("---")
+                                    # print(group_name)
+                                    # print(matched_str)
+                                    # print(token_idx)
                                     curr_alist[k] = quest_tokens[int(
                                         token_idx[1])]
-                                    #print(curr_alist[k])
+                                    # print(curr_alist[k])
                                 else:
                                     curr_alist[k] = "%" + matched_str
-                                    #print(curr_alist[k])
+                                    # print(curr_alist[k])
                                 break
                             elif k == '$filter':
                                 for item in curr_alist[k]:
@@ -354,7 +354,7 @@ class Parser:
                                                 curr_alist[k] = "%" + \
                                                     matched_str
                                             break
-                        #print(curr_alist)
+                        # print(curr_alist)
                     break
             if 'h' in curr_alist and curr_alist['h'] != 'value':
                 curr_alist['h'] = operator_mapping[curr_alist['h']]

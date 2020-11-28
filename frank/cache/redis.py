@@ -1,12 +1,12 @@
 # '''
 # File: redis.py
-# Description: 
-# 
+# Description:
+#
 
 # '''
 
 # import redis
-# from frank import config 
+# from frank import config
 
 # class RedisClientPool:
 #     class __RedisClientPool:
@@ -22,7 +22,7 @@
 #           RedisClientPool.instance = RedisClientPool.__RedisClientPool()
 #     def get_client(self):
 #         return self.instance.get_client()
-        
+
 
 # # print("\n\ncreate redis conn")
 # # redis_pool = redis.ConnectionPool(config.config['redis_host'], config.config['redis_port'], db=0)
@@ -37,5 +37,5 @@
 # #   # if redis_pool == None:
 # #   #   init()
 # #   #   return redis.Redis(connection_pool=redis_pool)
-# #   # else:    
+# #   # else:
 # #   #   return redis.Redis(connection_pool=redis_pool)
