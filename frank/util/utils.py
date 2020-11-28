@@ -76,3 +76,10 @@ def to_precision(x, p):
         out.append(m)
 
     return float("".join(out)) if '.' in out else int("".join(out))
+
+
+def listify(possible_list):
+    if not isinstance(possible_list, list):
+        return [possible_list]
+
+    return possible_list
