@@ -86,12 +86,12 @@ def reduce(alist: Alist, children: List[Alist], G: InferenceGraph):
     op_alist.state = states.EXPLORED
     # set as an aggregation node to help with display rendering
     op_alist.node_type = nt.HNODE
-    # alist.parent[0].link_child(op_alist)
     G.link(parent, op_alist, 'comp')
+    G.link(alist, op_alist, 'set-comp', create_new_id=False)
     nodes_enqueue.append((op_alist, parent, False, 'comp'))
     print(f'{pcol.BLUE}set-comp >> {op_alist.id}{pcol.RESET} {op_alist}{pcol.RESETALL}')
     if alist.children:
-        nodes_enqueue.append((op_alist, alist, False, 'set_comp'))
+        nodes_enqueue.append((op_alist, alist, False, 'setcomp'))
 
     # create children of the new branch
     # copy to avoid using different version from another thread in loop
@@ -105,7 +105,6 @@ def reduce(alist: Alist, children: List[Alist], G: InferenceGraph):
         for ref in new_sibling.variable_references(alist.get(tt.OPVAR)):
             if ref not in [tt.OPVAR]:
                 new_sibling.set(ref, ff)
-        # op_alist.link_child(new_sibling)
         new_sibling.node_type = nt.ZNODE
         G.link(op_alist, new_sibling, 'comp_lookup')
         nodes_enqueue_process.append(

@@ -49,14 +49,22 @@ def reduce(alist: Alist, children: List[Alist], G: InferenceGraph):
 
     gp_prediction = do_gpregress(X, y, x_to_predict, (np.max(y)-np.min(y))**2, 1)
 
-    y_predict = gp_prediction[0]['y']
-    prediction = [x_to_predict, y_predict]
-    alist.instantiate_variable(alist.get(tt.OPVAR), y_predict)
-    alist.instantiate_variable(tt.COV, gp_prediction[0]['stdev']/y_predict)
+    if gp_prediction is None:
+        return None
 
-    alist.instantiate_variable(tt.COV, estimate_uncertainty(
-        children, allNumeric, alist.get(tt.OP), len(children)
-    ))
+    y_predict = gp_prediction[0]['y']
+    try:
+        prediction = [x_to_predict, y_predict]
+        alist.instantiate_variable(alist.get(tt.OPVAR), y_predict)
+        alist.instantiate_variable(tt.COV, gp_prediction[0]['stdev']/y_predict)
+
+        alist.instantiate_variable(tt.COV, estimate_uncertainty(
+            children, allNumeric, alist.get(tt.OP), len(children)
+        ))
+    except Exception as ex:
+        print(ex)
+        return None
+
     return alist
 
 
@@ -66,17 +74,20 @@ def do_gpregress(observed_X, observed_Y, prediction_X, noise_var, len_scale):
     Xp = prediction_X.reshape(-1, 1)
     # kernel  = GPy.kern.RBF(input_dim=1, variance= noise_var, lengthscale=len_scale)
     # kernel with automatic relevance determination (ARD)
-    kernel = GPy.kern.RBF(input_dim=1, variance=noise_var,
-                          lengthscale=None, ARD=True)
-    #kernel  = GPy.kern.RBF(input_dim=1, variance=np.var(Y), lengthscale= (np.max(Y)-np.min(Y))/2)
+    try:
+        SQE = GPy.kern.RBF(input_dim=1, variance=noise_var, ARD=True) 
+        LIN = GPy.kern.Linear(input_dim=1)
+        PER = GPy.kern.StdPeriodic(input_dim=1)
+        RQ = GPy.kern.RatQuad(input_dim=1) 
+        kernel = (SQE * LIN) + (SQE * RQ) + PER # using default kernel params
+        #kernel  = GPy.kern.RBF(input_dim=1, variance=np.var(Y), lengthscale= (np.max(Y)-np.min(Y))/2)
+        # kernel = squared_exp #+ periodic
+        m = GPy.models.GPRegression(X, Y, kernel)
+        m.optimize(max_iters=1000)
+    except Exception as ex:
+        print(str(ex))
+        return None
 
-    m = GPy.models.GPRegression(X, Y, kernel)
-    m.optimize(max_iters=100)
-    #m.optimize_restarts(num_restarts = 10)
-    print(m)
-
-    #Xp = np.array([[0.2]])
-    #posteriorTestY = m.posterior_samples_f(testX, full_cov=True, size=1)
     Yp, Vp = m.predict(Xp)
 
     all_Xs = X.flatten().tolist()+Xp.flatten().tolist()
@@ -85,17 +96,11 @@ def do_gpregress(observed_X, observed_Y, prediction_X, noise_var, len_scale):
         [[min(all_Xs), min(all_Ys)], [max(all_Xs), max(all_Ys)]])
     x_limits = np.array([min(all_Xs)-1, max(all_Xs)+1])
 
-    # fig = m.plot(plot_limits=x_limits)
-    # pl.plot(Xp, Yp, 'or', ms=7)
-    # st = datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d%H%M%S')
-
-    # pl.legend().remove()
-    # pl.savefig("plot-" + st + ".jpg")
-    # fig.figure.show()
-    # pl.show()
-
-    # GPy.plotting.show(fig)
-    # input("press any key to exit")
+    fig = m.plot(plot_limits=x_limits)
+    pl.plot(Xp, Yp, 'or', ms=7)
+    st = datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d%H%M%S')
+    pl.legend().remove()
+    pl.savefig("plot-" + st + ".jpg")
 
     # prepare result to be returned
     predictions = []

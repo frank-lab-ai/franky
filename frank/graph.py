@@ -83,12 +83,13 @@ class InferenceGraph(nx.DiGraph):
         edges = [{"data": y} for y in g['edges']]
         return {'nodes': nodes, 'edges': edges}
         
-    def link(self, parent:Alist, child:Alist, edge_label=''):
+    def link(self, parent:Alist, child:Alist, edge_label='', create_new_id=True):
         if parent:
             succ = self.successors(parent.id)
             succ_nodes = [self.nodes[x] for x in succ]
-            child.depth = parent.depth + 1
-            child.id = f"{parent.depth + 1}{parent.id}{len(succ_nodes) + 1}"
+            if create_new_id:
+                child.depth = parent.depth + 1
+                child.id = f"{parent.depth + 1}{parent.id}{len(succ_nodes) + 1}"
             self.add_alist(child)
             self.add_edge(parent.id, child.id, **{'label': edge_label})
         else:

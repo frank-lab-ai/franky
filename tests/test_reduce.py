@@ -1,5 +1,6 @@
 import unittest
 
+import numpy as np
 import frank
 import frank.reduce.value
 import frank.reduce.values
@@ -57,13 +58,13 @@ class TestReduce(unittest.TestCase):
                            tt.OBJECT: '?x', tt.TIME: '2016', tt.OPVAR: '?x', tt.COST: 1, '?x': ''})
         self.c7.instantiate_variable('?x', '129')
 
-        self.alist.link_child(self.c1)
-        self.alist.link_child(self.c2)
-        self.alist.link_child(self.c3)
-        self.alist.link_child(self.c4)
-        self.alist.link_child(self.c5)
-        self.alist.link_child(self.c6)
-        self.alist.link_child(self.c7)
+        # self.alist.link_child(self.c1)
+        # self.alist.link_child(self.c2)
+        # self.alist.link_child(self.c3)
+        # self.alist.link_child(self.c4)
+        # self.alist.link_child(self.c5)
+        # self.alist.link_child(self.c6)
+        # self.alist.link_child(self.c7)
 
     def test_value(self):
         a = frank.reduce.value.reduce(self.alist, self.alist.children)
@@ -105,6 +106,47 @@ class TestReduce(unittest.TestCase):
         print(a)
         self.assertAlmostEqual(
             a.instantiation_value(tt.OPVAR), 134.89, places=2)
+
+    def test_gpregress_2(self):
+        alist = Alist(**{tt.ID: '101', tt.SUBJECT: 'Ghana', tt.PROPERTY: 'P1082',
+                              tt.OBJECT: '?x', tt.TIME: '2020', tt.OPVAR: '?x', tt.COST: 1})
+
+        c1 = Alist(**{tt.ID: '21011', tt.SUBJECT: 'Ghana', tt.PROPERTY: 'P1082',
+                           tt.OBJECT: '?x', tt.TIME: '2019.0', tt.OPVAR: '?x', tt.COST: 1, '?x': 1839758040765.62})
+        c2 = Alist(**{tt.ID: '21012', tt.SUBJECT: 'Ghana', tt.PROPERTY: 'P1082',
+                           tt.OBJECT: '?x', tt.TIME: '2018.0', tt.OPVAR: '?x', tt.COST: 1, '?x': 1885482534238.33})
+
+        a = frank.reduce.gpregress.reduce(alist, [c1, c2], None)
+        print(a)
+        self.assertAlmostEqual(
+            a.instantiation_value(tt.OPVAR), 134.89, places=2)
+
+    def test_do_gpregress(self):
+        data = [
+                [2019.0, 1839758040765.62],
+                [2018.0, 1885482534238.33],
+                [2017.0, 2055505502224.73], 
+                [2016.0, 1793989048409.29], 
+                [2015.0, 1802214373741.32], 
+                [2014.0, 2455993625159.37], 
+                [2013.0, 2472806919901.67], 
+                [2012.0, 2465188674415.03], 
+                [2011.0, 2616201578192.25], 
+                [2010.0, 2208871646202.82], 
+                [2009.0, 1667019780934.28], 
+                [2008.0, 1695824571927.15], 
+                [2007.0, 1397084345950.39], 
+                [2006.0, 1107640297889.95]
+                ]
+        X, y = [], []
+        for d in data:
+            X.append([d[0]]) 
+            y.append(d[1])
+        X = np.array(X)
+        y = np.array(y)
+        predict = frank.reduce.gpregress.do_gpregress(X,y, np.array([2022.]), (np.max(y)-np.min(y))**2, 1)
+        y_predict = predict[0]['y']
+        self.assertAlmostEqual(y_predict, 1991859750366, places=2)
 
     @unittest.skip
     def test_nnpredict(self):
