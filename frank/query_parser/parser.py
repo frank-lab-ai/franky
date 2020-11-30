@@ -17,7 +17,6 @@ import uuid
 import math
 import numbers
 from collections import deque
-
 import spacy
 import itertools
 import time
@@ -45,13 +44,14 @@ class Parser:
         # print(querystring)
         doc = Parser.nlp_lib(querystring)
 
-        # for token in doc:
-        #     print(token.text, token.lemma_, token.pos_, token.tag_, token.dep_)
+        for token in doc:
+            print(token.text, token.lemma_, token.pos_, token.tag_, token.dep_)
 
         pos_mapper = {
             # 'NOUN:WP': 'wh',
             'ADP:IN': 'prep',
             'NOUN:NN': 'propclass',
+            'NOUN:NNS': 'propclass',
             'PROPN:NNP': 'entity',
             'VERB:VBD': 'verb',
             'VERB:VBG': 'verb',
@@ -63,12 +63,12 @@ class Parser:
         }
 
         # expand templates
-        templates = [
-            ['entity', '$propOfentity'],
-            ['$propOfentity'],
-            #['wh', '$propOfentity'],
-            ['$propOfentity', '$compare', '$propOfentity']
-        ]
+        # templates = [
+        #     ['entity', '$propOfentity'],
+        #     ['$propOfentity'],
+        #     #['wh', '$propOfentity'],
+        #     ['$propOfentity', '$compare', '$propOfentity']
+        # ]
 
         operation_triggers = [
             'total', 'average', 'mean']
@@ -142,14 +142,8 @@ class Parser:
             if template_tokens[i] == 'prep':
                 template_tokens[i] = quest_tokens[i]
         tokens_zip = list(zip(template_tokens, quest_tokens))
-        # print(template_tokens)
-        # print(quest_tokens)
-        # print(tokens_zip)
-        try:
-            query_frame = self.GenerateQueryFromRegex(
-                quest_tokens, template_tokens, tokens_zip)
-        except:
-            query_frame = {}
+        query_frame = self.GenerateQueryFromRegex(
+            quest_tokens, template_tokens, tokens_zip)
 
         returnObj = {'question': querystring,
                      'template': template_tokens, 'alist': query_frame}
@@ -216,6 +210,8 @@ class Parser:
         return alist
 
     def scan_alist(self, alist, queue):
+        if not alist:
+            return queue
         for k, v in alist.items():
             if isinstance(v, dict):
                 queue.append((alist, k, v))
@@ -240,7 +236,7 @@ class Parser:
             (25, '^(?P<prop>propclass-\d*) (of)-\d* (?P<entity>entity-\d*)$'),  # X of Y>
 
 
-            # op X of <nested Y in T
+            # op X of nested Y in T
             (30, '^(?P<op>operation-\d*) (?P<prop>propclass-\d*) (of)-\d* (?P<entity>.*) (in|at)-\d* (?P<time>datetime-\d*)$'),
             # prop of (nested entity in T )
             (32, '^(?P<prop>propclass-\d*) (of)-\d* (?P<entity>(propclass-\d* (in|at)-\d*.*) (in|at)-\d* (datetime-\d*))$'),
@@ -265,33 +261,51 @@ class Parser:
 
             # comparisons
             # X prop of Y   e.g. is Paris the capital of France.
-            (80, '^(?P<entity>-\d*) (?P<prop>propclass-\d*) (of)-\d* (?P<entity>-\d*)$'),
+            # (80, '^(?P<entity>-\d*) (?P<prop>propclass-\d*) (of)-\d* (?P<entity>-\d*)$'),
+
+            # verb propclass
+            # sang Infinite Things
+            (90, '^(?P<prop>verb-\d*) (?P<entity>propclass-\d*)$'),
+
+            # sang <X of/in Y> : nested object
+            (95, '^(?P<prop>verb-\d*) (?P<entity>.*)$'),
+            # (95, '^(?P<verb>verb-\d*) (?P<class>propclass-\d*) (of|for|in)-\d* (?P<class>propclass-\d*)$'),
+            
+            # France population
+            (100, '^(?P<entity>.*) (?P<prop>propclass-\d*)$'),
 
         ]
 
         alist_patterns = {
 
-            10:  {'h': '@op',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0',  't': '@time'},
-            15:  {'h': 'value',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0',  't': '@time'},
-            20:  {'h': '@op',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0'},
-            25:  {'h': 'value',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0'},
+            10: {'h': '@op',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0',  't': '@time'},
+            15: {'h': 'value',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0',  't': '@time'},
+            20: {'h': '@op',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0'},
+            25: {'h': 'value',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0'},
 
-            30:  {'h': '@op',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0',  't': '@time'},
-            32:  {'h': 'value',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0'},
-            35:  {'h': 'value',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0',  't': '@time'},
-            40:  {'h': '@op',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0'},
-            45:  {'h': 'value',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0'},
+            30: {'h': '@op',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0',  't': '@time'},
+            32: {'h': 'value',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0'},
+            35: {'h': 'value',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0',  't': '@time'},
+            40: {'h': '@op',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0'},
+            45: {'h': 'value',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0'},
 
-            50:  {'h': '@op',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0',  't': '@time'},
-            55:  {'h': 'value',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0',  't': '@time'},
+            50: {'h': '@op',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0',  't': '@time'},
+            55: {'h': 'value',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0',  't': '@time'},
 
-            60:  {'$filter': [{'p': 'type', 'o': '@class'}, {'p': 'location', 'o': '@loc'}]},
-            65:  {'$filter': [{'p': 'type', 'o': '@class'}]},
-            # 65:  {'h': '@op', 's': '?x3', 'p': '@prop', 'o': '$y0', 'v': '$y0', 't': '@time', '?x3':{'$filter': [{'p':'type', 'o': '@class'}]} },
-            70:  {'h': '@op', 's': '@entity', 'p': '@prop', 'o': '$y0', 'v': '$y0', 't': '@time'},
-            75:  {'h': '@op', 's': '@entity', 'p': '@prop', 'o': '$y0', 'v': '$y0'},
+            60: {'$filter': [{'p': 'type', 'o': '@class'}, {'p': 'location', 'o': '@loc'}]},
+            65: {'$filter': [{'p': 'type', 'o': '@class'}]},
+            # 65: {'h': '@op', 's': '?x3', 'p': '@prop', 'o': '$y0', 'v': '$y0', 't': '@time', '?x3':{'$filter': [{'p':'type', 'o': '@class'}]} },
+            70: {'h': '@op', 's': '@entity', 'p': '@prop', 'o': '$y0', 'v': '$y0', 't': '@time'},
+            75: {'h': '@op', 's': '@entity', 'p': '@prop', 'o': '$y0', 'v': '$y0'},
             # comparisons
-            80: {}
+            # 80: {},
+
+            #
+            90: {'h': 'value', 's': '?y0', 'p': '@prop', 'o': '@entity', 'v': '?y0'},
+
+            95: {'h': 'value', 's': '?y0', 'p': '@prop', 'o': '@entity', 'v': '?y0'},
+
+            100: {'h': 'value', 's': '@entity', 'p': '@prop', 'o': '?y0', 'v': '?y0'},
         }
 
         operator_mapping = {
@@ -304,58 +318,55 @@ class Parser:
         matched_pattern = 1
         # print(_attr_value)
         kv_pairs = {'': _attr_value}
+        
         for attr, attr_val in kv_pairs.items():
-            # print("***")
-            # print(attr_val)
+            #print("***")
+            #print(attr_val)
+            curr_alist = []
             if len(attr_val.split()) < 1 and not isinstance(attr_val, dict) and not isinstance(attr_val, list):
                 continue
+            try:
+                for reg_items in regex_patterns:
+                    #print(reg_items)
+                    idx = reg_items[0]
+                    pattn = reg_items[1]
+                    re.purge()
+                    p = re.compile(pattn)
+                    m = p.match(attr_val.strip())
+                    s = p.sub('#', attr_val)
+                    if m is not None and s == '#':
+                        #print("matched...")
+                        matched_pattern = idx
+                        curr_alist = alist_patterns[idx]
+                        #curr_alist['pattern'] = idx
 
-            for reg_items in regex_patterns:
-                # print(reg_items)
-                idx = reg_items[0]
-                pattn = reg_items[1]
-                re.purge()
-                p = re.compile(pattn)
-                m = p.match(attr_val.strip())
-                s = p.sub('#', attr_val)
-                if m is not None and s == '#':
-                    # print("matched...")
-                    matched_pattern = idx
-                    curr_alist = alist_patterns[idx]
-                    #curr_alist['pattern'] = idx
+                        for group_name, matched_str in m.groupdict().items():
+                            for k, v in curr_alist.items():
 
-                    for group_name, matched_str in m.groupdict().items():
-                        for k, v in curr_alist.items():
+                                if v == ('@' + group_name):
+                                    token_idx = matched_str.split('-')
 
-                            if v == ('@' + group_name):
-                                token_idx = matched_str.split('-')
-
-                                if len(token_idx) == 2 and not (matched_pattern in [70, 75] and group_name == "entity"):
-                                    # print("---")
-                                    # print(group_name)
-                                    # print(matched_str)
-                                    # print(token_idx)
-                                    curr_alist[k] = quest_tokens[int(
-                                        token_idx[1])]
-                                    # print(curr_alist[k])
-                                else:
-                                    curr_alist[k] = "%" + matched_str
-                                    # print(curr_alist[k])
-                                break
-                            elif k == '$filter':
-                                for item in curr_alist[k]:
-                                    for x, y in item.items():
-                                        if y == ('@' + group_name):
-                                            token_idx = matched_str.split('-')
-                                            if len(token_idx) == 2:
-                                                item[x] = quest_tokens[int(
-                                                    token_idx[1])]
-                                            else:
-                                                curr_alist[k] = "%" + \
-                                                    matched_str
-                                            break
-                        # print(curr_alist)
-                    break
+                                    if len(token_idx) == 2 and not (matched_pattern in [70, 75] and group_name == "entity"):
+                                        curr_alist[k] = quest_tokens[int(
+                                            token_idx[1])]
+                                    else:
+                                        curr_alist[k] = "%" + matched_str
+                                    break
+                                elif k == '$filter':
+                                    for item in curr_alist[k]:
+                                        for x, y in item.items():
+                                            if y == ('@' + group_name):
+                                                token_idx = matched_str.split('-')
+                                                if len(token_idx) == 2:
+                                                    item[x] = quest_tokens[int(
+                                                        token_idx[1])]
+                                                else:
+                                                    curr_alist[k] = "%" + \
+                                                        matched_str
+                                                break
+                        break
+            except Exception as ex:
+                print(ex)
             if 'h' in curr_alist and curr_alist['h'] != 'value':
                 curr_alist['h'] = operator_mapping[curr_alist['h']]
             alist = curr_alist
