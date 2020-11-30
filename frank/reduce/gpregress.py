@@ -22,6 +22,7 @@ from frank.uncertainty.aggregateUncertainty import estimate_uncertainty
 from frank.reduce import propagate
 from frank.graph import InferenceGraph
 
+
 def reduce(alist: Alist, children: List[Alist], G: InferenceGraph):
     allNumeric = True
     y_predict = None
@@ -47,7 +48,8 @@ def reduce(alist: Alist, children: List[Alist], G: InferenceGraph):
     else:
         x_to_predict = np.array([x_to_predict])
 
-    gp_prediction = do_gpregress(X, y, x_to_predict, (np.max(y)-np.min(y))**2, 1)
+    gp_prediction = do_gpregress(
+        X, y, x_to_predict, (np.max(y)-np.min(y))**2, 1)
 
     if gp_prediction is None:
         return None
@@ -112,5 +114,5 @@ def do_gpregress(observed_X, observed_Y, prediction_X, noise_var, len_scale):
             {'x': prediction_X[i],
              'y': mu_flat[i],
              'stdev': s_flat[i]})
-    
+
     return predictions

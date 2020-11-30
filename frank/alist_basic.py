@@ -166,9 +166,9 @@ class AlistB:
 
     def uninstantiated_nesting_variables(self):
         variables = {x: y for (x, y) in self.attributes.items()
-                     if str(x).startswith((VarPrefix.AUXILLIARY, VarPrefix.NESTING, VarPrefix.PROJECTION)) 
-                        and isinstance(y, dict) 
-                        and x != Attributes.CONTEXT
+                     if str(x).startswith((VarPrefix.AUXILLIARY, VarPrefix.NESTING, VarPrefix.PROJECTION))
+                     and isinstance(y, dict)
+                     and x != Attributes.CONTEXT
                      }
         if variables:
             return variables

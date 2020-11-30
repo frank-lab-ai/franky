@@ -17,6 +17,7 @@ from .map import Map
 from frank.graph import InferenceGraph
 import frank.context
 
+
 class Normalize(Map):
     def __init__(self):
         pass
@@ -62,7 +63,7 @@ class Normalize(Map):
                     child.state = states.UNEXPLORED
                     child.node_type = nt.ZNODE
                     child.set(tt.CONTEXT, op_alist.get(tt.CONTEXT))
-                    child =  frank.context.inject_query_context(child)
+                    child = frank.context.inject_query_context(child)
                     G.link(op_alist, child, op_alist.parent_decomposition)
                     return op_alist
                 else:
@@ -77,12 +78,12 @@ class Normalize(Map):
                         child.state = states.UNEXPLORED
                         child.node_type = nt.ZNODE
                         child.set(tt.CONTEXT, op_alist.get(tt.CONTEXT))
-                        child =  frank.context.inject_query_context(child)
+                        child = frank.context.inject_query_context(child)
                         G.link(op_alist, child, op_alist.parent_decomposition)
                     return op_alist
 
             elif NormalizeFn.IN in v:
-                op_alist = alist.copy()                
+                op_alist = alist.copy()
                 op_alist.set(tt.OPVAR, nest_attr)
                 op_alist.set(tt.OP, 'comp')
                 del op_alist.attributes[nest_attr]
@@ -116,7 +117,7 @@ class Normalize(Map):
                     child.node_type = nt.ZNODE
                     child.cost = op_alist.cost + 1
                     child.set(tt.CONTEXT, op_alist.get(tt.CONTEXT))
-                    child =  frank.context.inject_query_context(child)
+                    child = frank.context.inject_query_context(child)
                     G.link(op_alist, child, op_alist.parent_decomposition)
                 return op_alist
 
@@ -124,7 +125,7 @@ class Normalize(Map):
                 op_alist = alist.copy()
                 op_alist.set(tt.OPVAR, nest_attr)
                 op_alist.set(tt.OP, 'comp')
-                del op_alist.attributes[nest_attr] 
+                del op_alist.attributes[nest_attr]
                 op_alist.cost = alist.cost + 1
                 op_alist.state = states.EXPLORED
                 op_alist.parent_decomposition = 'normalize'
@@ -141,7 +142,7 @@ class Normalize(Map):
                 child.cost = op_alist.cost + 1
                 child.node_type = nt.ZNODE
                 child.set(tt.CONTEXT, op_alist.get(tt.CONTEXT))
-                child =  frank.context.inject_query_context(child)
+                child = frank.context.inject_query_context(child)
                 G.link(op_alist, child, op_alist.parent_decomposition)
 
                 if v[NormalizeFn.IS].startswith((vx.AUXILLIARY, vx.NESTING, vx.PROJECTION)) == False:
@@ -156,13 +157,13 @@ class Normalize(Map):
                     leaf.cost = op_alist.cost + 1
                     leaf.node_type = nt.ZNODE
                     leaf.set(tt.CONTEXT, op_alist.get(tt.CONTEXT))
-                    leaf =  frank.context.inject_query_context(leaf)
+                    leaf = frank.context.inject_query_context(leaf)
                     G.link(child, leaf, op_alist.parent_decomposition)
 
                 return op_alist
 
             elif tt.OP in v:
-                op_alist = alist.copy()                
+                op_alist = alist.copy()
                 op_alist.set(tt.OPVAR, nest_attr)
                 op_alist.set(tt.OP, 'comp')
                 # del op_alist.attributes[nest_attr]
@@ -187,8 +188,8 @@ class Normalize(Map):
                         var_ctr = var_ctr + 1
                 child.cost = op_alist.cost + 1
                 child.node_type = nt.ZNODE
-                child.set(tt.CONTEXT, op_alist.get(tt.CONTEXT))                
-                child =  frank.context.inject_query_context(child)
+                child.set(tt.CONTEXT, op_alist.get(tt.CONTEXT))
+                child = frank.context.inject_query_context(child)
                 G.link(op_alist, child, op_alist.parent_decomposition)
                 return op_alist
         return None

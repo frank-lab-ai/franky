@@ -17,6 +17,8 @@ from frank.alist import Alist
 
 REDIS = 'redis'
 NEO4J = 'neo4j'
+
+
 class Logging:
     running = False
     write_queue = queue.Queue(maxsize=0)
@@ -39,7 +41,7 @@ class Logging:
         #             except Exception as ex:
         #                 print(f"Exception ocurred when caching to neo4j: {str(ex)}")
         #         elif item[0] == REDIS:
-        #             try: 
+        #             try:
         #                 if item[1] == 'lpush':
         #                     RedisClientPool().get_client().lpush(item[3], item[4])
         #                 elif item[1] == 'mset':
@@ -47,12 +49,11 @@ class Logging:
         #                 # expiry
         #                 if item[2] == True:
         #                         RedisClientPool().get_client().expire(item[3], config.config['redis_expire_seconds'])
-                        
+
         #             except Exception as e:
         #                     print("Exception occurred when caching to redis. " + str(e))
 
         return
-        
 
     def log(self, log_item):
         # """

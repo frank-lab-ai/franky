@@ -24,10 +24,10 @@ class Alist:
             Attributes.FNPLOT: kwargs[Attributes.FNPLOT] if Attributes.FNPLOT in kwargs else '',
             Attributes.CONTEXT: kwargs[Attributes.CONTEXT] if Attributes.CONTEXT in kwargs else '',
             'meta': {
-                'cost' : kwargs[Attributes.COST] if Attributes.COST in kwargs else 0.0,
-                'depth' : 0,
-                'state' : States.UNEXPLORED,
-                'data_sources' : [],
+                'cost': kwargs[Attributes.COST] if Attributes.COST in kwargs else 0.0,
+                'depth': 0,
+                'state': States.UNEXPLORED,
+                'data_sources': [],
                 'branch_type': Branching.OR,
                 'node_type': NodeTypes.ZNODE
             }
@@ -53,7 +53,6 @@ class Alist:
         self.nodes_to_enqueue_and_process = []
         self.parent_decomposition = ''
 
-        
     @property
     def id(self):
         return self.attributes[Attributes.ID]
@@ -77,7 +76,7 @@ class Alist:
     @depth.setter
     def depth(self, value):
         self.attributes['meta']['depth'] = value
-    
+
     @property
     def state(self):
         return self.attributes['meta']['state']
@@ -85,7 +84,7 @@ class Alist:
     @state.setter
     def state(self, value):
         self.attributes['meta']['state'] = value
-    
+
     @property
     def data_sources(self):
         return self.attributes['meta']['data_sources']
@@ -109,7 +108,6 @@ class Alist:
     @node_type.setter
     def node_type(self, value):
         self.attributes['meta']['node_type'] = value
-
 
     def set(self, attribute, value):
         """
@@ -231,9 +229,9 @@ class Alist:
 
     def uninstantiated_nesting_variables(self):
         variables = {x: y for (x, y) in self.attributes.items()
-                     if str(x).startswith((VarPrefix.AUXILLIARY, VarPrefix.NESTING, VarPrefix.PROJECTION)) 
-                        and isinstance(y, dict) 
-                        and x != Attributes.CONTEXT
+                     if str(x).startswith((VarPrefix.AUXILLIARY, VarPrefix.NESTING, VarPrefix.PROJECTION))
+                     and isinstance(y, dict)
+                     and x != Attributes.CONTEXT
                      }
         if variables:
             return variables
