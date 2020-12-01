@@ -59,7 +59,7 @@ def cli(query, context={}):
     if query_json:        
         alist = Alist(**query_json)
         if context:
-            context_json = json.loads(context) if type(context) == 'str' else context
+            context_json = json.loads(context) if type(context) == str else context
             alist.set(tt.CONTEXT, context_json)
         print(f"{pcol.YELLOW} ├── query alist:{json.dumps(alist.attributes)} {pcol.RESETALL}")
         print(f"{pcol.YELLOW} └── session id:{session_id} {pcol.RESETALL}\n")

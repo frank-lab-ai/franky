@@ -208,9 +208,9 @@ class Infer:
         found_facts = []
         sources = {
             'wikidata': {'fn': wikidata, 'trust': 'low'},
-            'worldbank': {'fn': worldbank, 'trust': 'high'},
-            'gregbrimblecom!': {'fn': jsonld.JSONLD.from_url('gregbrimblecom!', 'https://gregbrimble.com'), 'trust': 'high'},
-            'mozilla': {'fn': jsonld.JSONLD.from_url('mozilla', 'https://www.mozilla.org/en-GB/'), 'trust': 'high'}
+            'worldbank': {'fn': worldbank, 'trust': 'high'} #,
+            # 'gregbrimblecom!': {'fn': jsonld.JSONLD.from_url('gregbrimblecom!', 'https://gregbrimble.com'), 'trust': 'high'},
+            # 'mozilla': {'fn': jsonld.JSONLD.from_url('mozilla', 'https://www.mozilla.org/en-GB/'), 'trust': 'high'}
         }
         context = alist.get(tt.CONTEXT)
         context_store = {}
