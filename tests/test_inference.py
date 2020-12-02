@@ -4,7 +4,7 @@ from frank.alist import Attributes as tt, States as states
 from frank.infer import Infer
 
 
-class Test_FrankCore(unittest.TestCase):
+class Test_Inference(unittest.TestCase):
 
     def setUp(self):
         self.infer = Infer()
