@@ -265,7 +265,7 @@ class Parser:
 
             # verb propclass
             # sang Infinite Things
-            (90, '^(?P<prop>verb-\d*) (?P<entity>propclass-\d*)$'),
+            (90, '^(?P<prop>verb-\d*) (of|in|for)-\d* (?P<entity>propclass-\d*)$'),
 
             # sang <X of/in Y> : nested object
             (95, '^(?P<prop>verb-\d*) (?P<entity>.*)$'),
