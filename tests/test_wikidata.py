@@ -132,6 +132,9 @@ class TestWikidata(unittest.TestCase):
         locations = wikidata.find_location_of_entity("London")
         self.assertTrue(len(locations) > 0)
 
+    def test_search_properties_from_rootword(self):
+        prop = wikidata.search_properties("singing")
+        self.assertTrue(len(prop) > 0)
 
 if __name__ == '__main__':
     unittest.main()

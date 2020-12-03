@@ -13,12 +13,27 @@ from frank.alist import Alist
 from frank.alist import Attributes as tt
 from frank import config
 from frank.kb import mongo
+from frank.kb import conceptnet
 import frank.util.utils
 from datetime import datetime
 import frank.dataloader
 
 
 def search_properties(search_term):
+    cache = {
+        'type': ('P31', 'type', 1.0),
+        'sing': ('P175', 'perform', 1.0)
+    }
+    if search_term in cache:
+        return [cache[search_term]]
+    else:
+        # get root word
+        root_word = conceptnet.find_root_word(search_term)
+        root_match = list(set(cache).intersection(root_word))
+        # root_match = list(root_match)
+        if root_match:
+            return [cache[root_match[0]]]
+    
     if config.config['use_db']:
         return search_db_properties(search_term)
     else:
@@ -33,24 +48,21 @@ def search_properties(search_term):
             return []
 
 
-def search_db_properties(search_term):
-    results = []
-    if search_term == 'type':
-        results.append(('P31', 'type'))
-    else:
-        try:
-            # client = MongoClient(host=config.config['mongo_host'], port=config.config['mongo_port'])
-            client = mongo.getClient()
-            db = client[config.config['mongo_db']]
-            db_result = db['wikidataprops'].find(
-                {'$text': {'$search': search_term}}, {
-                    'score': {'$meta': 'textScore'}}
-            )
-            db_result.sort([('score', {'$meta': 'textScore'})]).limit(10)
-            for r in db_result:
-                results.append((r['id'], r['label'], r['score']))
-        except Exception as ex:
-            print('Error retreiving data from MongoDB: ' + str(ex.args))
+def search_db_properties(search_term): 
+    results = []  
+    try:
+        # client = MongoClient(host=config.config['mongo_host'], port=config.config['mongo_port'])
+        client = mongo.getClient()
+        db = client[config.config['mongo_db']]
+        db_result = db['wikidataprops'].find(
+            {'$text': {'$search': search_term}}, {
+                'score': {'$meta': 'textScore'}}
+        )
+        db_result.sort([('score', {'$meta': 'textScore'})]).limit(10)
+        for r in db_result:
+            results.append((r['id'], r['label'], r['score']))
+    except Exception as ex:
+        print('Error retreiving data from MongoDB: ' + str(ex.args))
 
     return results
 
