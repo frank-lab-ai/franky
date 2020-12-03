@@ -82,6 +82,15 @@ class TestParser(unittest.TestCase):
 
         self.assertEqual(output['template'], ['propclass', 'propclass'])
 
+    def test_parse_nn_pps(self):
+        query = "Friends theme songs"
+        # query = "Ghana population"
+        parser = frank.query_parser.parser.Parser()
+        output = parser.getNextSuggestion(query)
+        print(output)
+
+        self.assertEqual(output['template'], ['propclass', 'propclass'])
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -341,6 +341,10 @@ class Parser:
                                         curr_alist[k] = tokens[int(token_idx[1])][1]
                                     else:
                                         curr_alist[k] = "%" + matched_str
+                            
+                                    # if prop is plural, replace VALUE with VALUES op
+                                    if v == '@prop' and curr_alist['h'] == 'value' and tokens[int(token_idx[1])][2] == 'NOUN:NNS':
+                                        curr_alist['h'] = 'values'
                                     break
                                 elif k == '$filter':
                                     for item in curr_alist[k]:
@@ -356,10 +360,9 @@ class Parser:
                         break
             except Exception as ex:
                 print(ex)
-            if 'h' in curr_alist and curr_alist['h'] != 'value':
+            if 'h' in curr_alist and curr_alist['h'] not in  ['value', 'values']:
                 curr_alist['h'] = operator_mapping[curr_alist['h']]
             alist = curr_alist
-
         return (alist, var_ctr, matched_pattern)
 
     def Sorting(self, lst):
