@@ -40,8 +40,6 @@ class Parser:
         return self.getNextSuggestion(querystring)
 
     def getNextSuggestion(self, querystring):
-        #starttime = time.time()
-        # print(querystring)
         doc = Parser.nlp_lib(querystring)
 
         for token in doc:
@@ -62,14 +60,6 @@ class Parser:
             'NUM:CD': 'datetime'
         }
 
-        # expand templates
-        # templates = [
-        #     ['entity', '$propOfentity'],
-        #     ['$propOfentity'],
-        #     #['wh', '$propOfentity'],
-        #     ['$propOfentity', '$compare', '$propOfentity']
-        # ]
-
         operation_triggers = [
             'total', 'average', 'mean']
         stop_words = ['is', 'the', 'was']
@@ -83,67 +73,77 @@ class Parser:
         compound_NN = ''
         compound_PROPCLASS = ''
 
+        # check if all nouns
+        all_nns = True
         for token in doc:
-            if token.text in stop_words:
-                continue
-            if token.idx >= skip_start_char and token.idx <= skip_end_char:
-                continue
-            in_ent = False
-            for ent in doc.ents:
-                if token.idx >= ent.start_char and token.idx <= ent.end_char:
-                    token_tags = token.pos_ + ':' + token.tag_
-                    if token_tags in pos_mapper:
-                        in_ent = True
-                        skip_start_char = ent.start_char
-                        skip_end_char = ent.end_char
-
-                    mapped_terms.append(
-                        [v for k, v in pos_mapper.items() if k == token_tags])
-                    mapped_terms2.append([ent.text.replace('the', '').strip(
-                    ) for k, v in pos_mapper.items() if k == token_tags])
-                    break
-
-            if in_ent == False:
-                skip_start_char = -1
-                skip_end_char = -1
-                if token.tag_ == "JJ" and token.text not in operation_triggers:
-                    compound_PROPCLASS = token.text_with_ws
+            if token.pos_ != 'NOUN':
+                all_nns = False
+                break
+        
+        if all_nns:
+            for token in doc:
+                if token.text in stop_words:
                     continue
+                token_tag = token.pos_ + ':' + token.tag_
+                if token.head.i > token.i + 1:
+                    # do not append head token
+                    if token_tag in pos_mapper:
+                        mapped_terms.append((pos_mapper[token_tag], token.text.strip()))
+                if token.head.i == token.i + 1:
+                    # if this token appears just before the head token
+                    token_tag = token.head.pos_ + ':' + token.head.tag_
+                    if token_tag in pos_mapper:
+                        mapped_terms.append((pos_mapper[token_tag], (token.text + ' ' + token.head.text).strip() ))
 
-            if in_ent == False:
-                skip_start_char = -1
-                skip_end_char = -1
-                token_tags = token.pos_ + ':' + token.tag_
-                if token.dep_ == 'compound' and in_compound == False:
-                    in_compound = True
-                    compound_NN = compound_PROPCLASS + token.text
-                    compound_PROPCLASS = ''
+        if not all_nns:
+            for token in doc:
+                if token.text in stop_words:
+                    continue
+                if token.idx >= skip_start_char and token.idx <= skip_end_char:
+                    continue
+                in_ent = False
+                for ent in doc.ents:
+                    if token.idx >= ent.start_char and token.idx <= ent.end_char:
+                        token_tag = token.pos_ + ':' + token.tag_
+                        if token_tag in pos_mapper:
+                            in_ent = True
+                            skip_start_char = ent.start_char
+                            skip_end_char = ent.end_char                    
+                            mapped_terms.append((pos_mapper[token_tag], ent.text.replace('the', '').strip() ))
+                        break
 
-                elif token.dep_ != 'compound' and in_compound == True:
-                    compound_NN += ' ' + token.text
-                    mapped_terms.append(
-                        [v for k, v in pos_mapper.items() if k == token_tags])
-                    mapped_terms2.append([compound_NN.strip()])
-                    compound_NN = ''
-                    in_compound = False
+                if in_ent == False:
+                    skip_start_char = -1
+                    skip_end_char = -1
+                    if token.tag_ == "JJ" and token.text not in operation_triggers:
+                        compound_PROPCLASS = token.text_with_ws
+                        continue
 
-                else:
-                    mapped_terms.append(
-                        [v for k, v in pos_mapper.items() if k == token_tags])
-                    mapped_terms2.append(
-                        [compound_PROPCLASS + token.text for k, v in pos_mapper.items() if k == token_tags])
-                    compound_PROPCLASS = ''
+                if in_ent == False:
+                    skip_start_char = -1
+                    skip_end_char = -1
+                    token_tag = token.pos_ + ':' + token.tag_
+                    if token.dep_ == 'compound' and in_compound == False:
+                        in_compound = True
+                        compound_NN = compound_PROPCLASS + token.text
+                        compound_PROPCLASS = ''
 
-        # replace sequence of propclasses with a single propclass
-        template_tokens = [
-            item for sublist in mapped_terms for item in sublist]
-        quest_tokens = [item for sublist in mapped_terms2 for item in sublist]
-        for i in range(len(template_tokens)):
-            if template_tokens[i] == 'prep':
-                template_tokens[i] = quest_tokens[i]
-        tokens_zip = list(zip(template_tokens, quest_tokens))
+                    elif token.dep_ != 'compound' and in_compound == True:
+                        compound_NN += ' ' + token.text
+                        if token_tag in pos_mapper:
+                            mapped_terms.append((pos_mapper[token_tag], compound_NN.strip()))
+                        compound_NN = ''
+                        in_compound = False
+
+                    else:
+                        if token_tag in pos_mapper:
+                            mapped_terms.append((pos_mapper[token_tag], compound_PROPCLASS + token.text))
+                        compound_PROPCLASS = ''
+
+        template_tokens = [x[0] if x[0] != 'prep' else x[1] for x in mapped_terms]
+        quest_tokens = [x[1] for x in mapped_terms]
         query_frame = self.GenerateQueryFromRegex(
-            quest_tokens, template_tokens, tokens_zip)
+            quest_tokens, template_tokens, mapped_terms)
 
         returnObj = {'question': querystring,
                      'template': template_tokens, 'alist': query_frame}
@@ -169,9 +169,6 @@ class Parser:
             curr_alist = qitem[0]
             k = qitem[1]
             v = qitem[2]
-            # print("===gen===")
-            # print(v)
-            # print("===genEND===")
             if isinstance(v, str):
                 if len(v.split()) > 0:
                     is_nested = True
@@ -255,7 +252,6 @@ class Parser:
             # country in Africa
             (60, '^(?P<class>propclass-\d*) (in|at)-\d* (?P<loc>entity-\d*)$'),
             (65, '^(?P<class>propclass-\d*)$'),  # country ...
-            #(65, '^(?P<class>propclass-\d*) (with|verb)-\d* (?P<op>operation-\d*) (?P<prop>propclass-\d*) (in|at)-\d* (?P<time>datetime-\d*)$'),
             (70, '^(?P<entity>.*) (with|verb)-\d* (?P<op>operation-\d*) (?P<prop>propclass-\d*) (in|at)-\d* (?P<time>datetime-\d*)$'),
             (75, '^(?P<entity>.*) (with|verb)-\d* (?P<op>operation-\d*) (?P<prop>propclass-\d*)$'),
 
@@ -273,6 +269,8 @@ class Parser:
             
             # France population
             (100, '^(?P<entity>.*) (?P<prop>propclass-\d*)$'),
+            # Friends theme_song
+            (105, '^(?P<entity>propclass-\d*) (?P<prop>propclass-\d*)$'),
 
         ]
 
@@ -297,15 +295,11 @@ class Parser:
             # 65: {'h': '@op', 's': '?x3', 'p': '@prop', 'o': '$y0', 'v': '$y0', 't': '@time', '?x3':{'$filter': [{'p':'type', 'o': '@class'}]} },
             70: {'h': '@op', 's': '@entity', 'p': '@prop', 'o': '$y0', 'v': '$y0', 't': '@time'},
             75: {'h': '@op', 's': '@entity', 'p': '@prop', 'o': '$y0', 'v': '$y0'},
-            # comparisons
-            # 80: {},
-
-            #
+            
             90: {'h': 'value', 's': '?y0', 'p': '@prop', 'o': '@entity', 'v': '?y0'},
-
             95: {'h': 'value', 's': '?y0', 'p': '@prop', 'o': '@entity', 'v': '?y0'},
-
             100: {'h': 'value', 's': '@entity', 'p': '@prop', 'o': '?y0', 'v': '?y0'},
+            105: {'h': 'value', 's': '@entity', 'p': '@prop', 'o': '?y0', 'v': '?y0'},
         }
 
         operator_mapping = {
@@ -316,12 +310,9 @@ class Parser:
         }
 
         matched_pattern = 1
-        # print(_attr_value)
         kv_pairs = {'': _attr_value}
         
         for attr, attr_val in kv_pairs.items():
-            #print("***")
-            #print(attr_val)
             curr_alist = []
             if len(attr_val.split()) < 1 and not isinstance(attr_val, dict) and not isinstance(attr_val, list):
                 continue
@@ -338,7 +329,6 @@ class Parser:
                         #print("matched...")
                         matched_pattern = idx
                         curr_alist = alist_patterns[idx]
-                        #curr_alist['pattern'] = idx
 
                         for group_name, matched_str in m.groupdict().items():
                             for k, v in curr_alist.items():

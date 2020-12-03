@@ -24,7 +24,7 @@ class TestParser(unittest.TestCase):
         output = parser.getNextSuggestion(query)
         print(output)
 
-        self.assertEqual(output['template'], ['propclass', 'of', 'entity'])
+        self.assertEqual(output['template'], ['propclass', 'of', 'propclass', 'of','entity'])
 
     def test_parse_wh_prop_obj(self):
         # query = "who is the president of Ghana"
@@ -73,6 +73,14 @@ class TestParser(unittest.TestCase):
 
         self.assertEqual(output['template'], ['verb', 'propclass', 'of', 'propclass'])
 
+    def test_parse_nn_pp(self):
+        query = "Friends theme song"
+        # query = "Ghana population"
+        parser = frank.query_parser.parser.Parser()
+        output = parser.getNextSuggestion(query)
+        print(output)
+
+        self.assertEqual(output['template'], ['propclass', 'propclass'])
 
 
 if __name__ == '__main__':
