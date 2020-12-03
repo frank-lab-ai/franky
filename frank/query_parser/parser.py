@@ -42,8 +42,8 @@ class Parser:
     def getNextSuggestion(self, querystring):
         doc = Parser.nlp_lib(querystring)
 
-        for token in doc:
-            print(token.text, token.lemma_, token.pos_, token.tag_, token.dep_)
+        # for token in doc:
+        #     print(token.text, token.lemma_, token.pos_, token.tag_, token.dep_)
 
         pos_mapper = {
             # 'NOUN:WP': 'wh',
@@ -88,12 +88,12 @@ class Parser:
                 if token.head.i > token.i + 1:
                     # do not append head token
                     if token_tag in pos_mapper:
-                        mapped_terms.append((pos_mapper[token_tag], token.text.strip()))
+                        mapped_terms.append([pos_mapper[token_tag], token.text.strip(), token_tag])
                 if token.head.i == token.i + 1:
                     # if this token appears just before the head token
                     token_tag = token.head.pos_ + ':' + token.head.tag_
                     if token_tag in pos_mapper:
-                        mapped_terms.append((pos_mapper[token_tag], (token.text + ' ' + token.head.text).strip() ))
+                        mapped_terms.append([pos_mapper[token_tag], (token.text + ' ' + token.head.text).strip(), token_tag])
 
         if not all_nns:
             for token in doc:
@@ -109,7 +109,7 @@ class Parser:
                             in_ent = True
                             skip_start_char = ent.start_char
                             skip_end_char = ent.end_char                    
-                            mapped_terms.append((pos_mapper[token_tag], ent.text.replace('the', '').strip() ))
+                            mapped_terms.append([pos_mapper[token_tag], ent.text.replace('the', '').strip(), token_tag])
                         break
 
                 if in_ent == False:
@@ -131,35 +131,37 @@ class Parser:
                     elif token.dep_ != 'compound' and in_compound == True:
                         compound_NN += ' ' + token.text
                         if token_tag in pos_mapper:
-                            mapped_terms.append((pos_mapper[token_tag], compound_NN.strip()))
+                            mapped_terms.append([pos_mapper[token_tag], compound_NN.strip(), token_tag])
                         compound_NN = ''
                         in_compound = False
 
                     else:
                         if token_tag in pos_mapper:
-                            mapped_terms.append((pos_mapper[token_tag], compound_PROPCLASS + token.text))
+                            mapped_terms.append([pos_mapper[token_tag], compound_PROPCLASS + token.text, token_tag])
                         compound_PROPCLASS = ''
+                        
+        for x in mapped_terms:
+            if x[0] == 'prep':
+                x[0] = x[1]
 
-        template_tokens = [x[0] if x[0] != 'prep' else x[1] for x in mapped_terms]
-        quest_tokens = [x[1] for x in mapped_terms]
-        query_frame = self.GenerateQueryFromRegex(
-            quest_tokens, template_tokens, mapped_terms)
+        query_frame = self.GenerateQueryFromRegex(mapped_terms)
 
         returnObj = {'question': querystring,
-                     'template': template_tokens, 'alist': query_frame}
+                     'template': [x[0] for x in mapped_terms], 
+                     'alist': query_frame}
         return (returnObj)
 
-    def GenerateQueryFromRegex(self, quest_tokens, template_tokens, tokens_zip):
+    def GenerateQueryFromRegex(self, tokens):
         tokens_with_idx = ''
-        for idx in range(len(template_tokens)):
-            tokens_with_idx += template_tokens[idx] + '-' + str(idx) + ' '
+        for idx in range(len(tokens)):
+            tokens_with_idx += tokens[idx][0] + '-' + str(idx) + ' '
         tokens_with_idx = tokens_with_idx.strip()
 
         alist = {}
         is_nested = True
         var_ctr = 3
         (alist, var_ctr, pattern) = self.create_alist(
-            alist, tokens_with_idx, var_ctr, quest_tokens)
+            alist, tokens_with_idx, var_ctr, tokens)
         queue = deque()
         queue = self.scan_alist(alist, queue)
 
@@ -173,7 +175,7 @@ class Parser:
                 if len(v.split()) > 0:
                     is_nested = True
                     (sub_alist, var_ctr, pattern) = self.create_alist(
-                        {}, v, var_ctr, quest_tokens)
+                        {}, v, var_ctr, tokens)
 
                     # change other projection vars to aux for pattern where subject is projected
                     if previous_pattern == 70:
@@ -221,7 +223,7 @@ class Parser:
                 queue.append((alist, k, v.replace('%', '')))
         return queue
 
-    def create_alist(self, alist, _attr_value, var_ctr, quest_tokens):
+    def create_alist(self, alist, _attr_value, var_ctr, tokens):
         curr_year = str(datetime.datetime.now().year)
         regex_patterns = [
             # op X of Y in T
@@ -292,7 +294,6 @@ class Parser:
 
             60: {'$filter': [{'p': 'type', 'o': '@class'}, {'p': 'location', 'o': '@loc'}]},
             65: {'$filter': [{'p': 'type', 'o': '@class'}]},
-            # 65: {'h': '@op', 's': '?x3', 'p': '@prop', 'o': '$y0', 'v': '$y0', 't': '@time', '?x3':{'$filter': [{'p':'type', 'o': '@class'}]} },
             70: {'h': '@op', 's': '@entity', 'p': '@prop', 'o': '$y0', 'v': '$y0', 't': '@time'},
             75: {'h': '@op', 's': '@entity', 'p': '@prop', 'o': '$y0', 'v': '$y0'},
             
@@ -337,8 +338,7 @@ class Parser:
                                     token_idx = matched_str.split('-')
 
                                     if len(token_idx) == 2 and not (matched_pattern in [70, 75] and group_name == "entity"):
-                                        curr_alist[k] = quest_tokens[int(
-                                            token_idx[1])]
+                                        curr_alist[k] = tokens[int(token_idx[1])][1]
                                     else:
                                         curr_alist[k] = "%" + matched_str
                                     break
@@ -348,8 +348,7 @@ class Parser:
                                             if y == ('@' + group_name):
                                                 token_idx = matched_str.split('-')
                                                 if len(token_idx) == 2:
-                                                    item[x] = quest_tokens[int(
-                                                        token_idx[1])]
+                                                    item[x] = tokens[int(token_idx[1])][1]
                                                 else:
                                                     curr_alist[k] = "%" + \
                                                         matched_str
