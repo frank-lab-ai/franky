@@ -8,7 +8,6 @@ Description: Template-based parser for NL queries.
 import datetime
 
 import json
-import requests
 import hashlib
 import hmac
 from urllib.parse import urlencode

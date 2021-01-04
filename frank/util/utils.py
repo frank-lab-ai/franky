@@ -83,3 +83,7 @@ def listify(possible_list):
         return [possible_list]
 
     return possible_list
+
+
+def filter_out_falsy(a_list_of_possible_falsy_things):
+    return list(filter(lambda x: x, a_list_of_possible_falsy_things))
