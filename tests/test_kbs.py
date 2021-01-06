@@ -3,6 +3,7 @@ import unittest
 from frank.kb import worldbank
 from frank.kb import rdf
 from frank.kb import conceptnet
+from frank.kb import musicbrainz
 from frank.alist import Alist
 from frank.alist import Attributes as tt
 
@@ -39,6 +40,9 @@ class TestKbs(unittest.TestCase):
         result = conceptnet.find_relation_object("P9", "PartOf")
         self.assertTrue(len(result) > 0 , "should not be empty")
 
+    def test_getMusicRecording(self):
+        result = musicbrainz.find_recording(title="Torn", artist="Natalie")
+        self.assertTrue(len(result) > 0, "list should not be empty")
 
 if __name__ == '__main__':
     unittest.main()

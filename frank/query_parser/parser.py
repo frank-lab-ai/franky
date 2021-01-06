@@ -42,8 +42,8 @@ class Parser:
     def getNextSuggestion(self, querystring):
         doc = Parser.nlp_lib(querystring)
 
-        # for token in doc:
-        #     print(token.text, token.lemma_, token.pos_, token.tag_, token.dep_)
+        for token in doc:
+            print(token.text, token.lemma_, token.pos_, token.tag_, token.dep_)
 
         pos_mapper = {
             # 'NOUN:WP': 'wh',
@@ -62,7 +62,8 @@ class Parser:
 
         operation_triggers = [
             'total', 'average', 'mean']
-        stop_words = ['is', 'the', 'was']
+        stop_words = ['is', 'the', 'was', 'did']
+        query_types = ['what', "how many", "when", "who"]
 
         mapped_terms = []
         mapped_terms2 = []
