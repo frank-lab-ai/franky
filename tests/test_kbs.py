@@ -44,5 +44,18 @@ class TestKbs(unittest.TestCase):
         result = musicbrainz.find_recording(title="Torn", artist="Natalie")
         self.assertTrue(len(result) > 0, "list should not be empty")
 
+    def test_getMusicDataArtist(self):
+        a = Alist(**{tt.ID: '1', tt.SUBJECT: '?x', tt.PROPERTY: 'sang', tt.OBJECT: 'Giants',
+                     tt.TIME: '2020', tt.OPVAR: '?x', tt.COST: 1})
+        result = musicbrainz.find_property_values(a, search_element=tt.SUBJECT)
+        self.assertTrue(result == None, "result should not be None")
+    
+    def test_getMusicDataTime(self):
+        # when did Dermot sing Giants?
+        a = Alist(**{tt.ID: '1', tt.SUBJECT: 'Dermot', tt.PROPERTY: 'sang', tt.OBJECT: 'Giants',
+                     tt.TIME: '?x', tt.OPVAR: '?x', tt.COST: 1})
+        result = musicbrainz.find_property_values(a, search_element=tt.TIME)
+        self.assertTrue(result == None, "result should not be None")
+
 if __name__ == '__main__':
     unittest.main()
