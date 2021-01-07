@@ -27,7 +27,7 @@ def reduce(alist: Alist, children: List[Alist], G: InferenceGraph):
     for c in children:
         for k, v in c.instantiated_attributes().items():
             if k not in inst_vars and k in alist.attributes and k != tt.OP:
-                alist.instantiate_variable(k, v)
+                c.instantiate_variable(k, v)
 
         opVarValue = c.get(c.get(tt.OPVAR))
         if utils.is_numeric(opVarValue):
