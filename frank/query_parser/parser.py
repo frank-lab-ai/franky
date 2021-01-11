@@ -41,9 +41,10 @@ class Parser:
 
     def getNextSuggestion(self, querystring):
         doc = Parser.nlp_lib(querystring)
-
+        tkns = []
         for token in doc:
-            print(token.text, token.lemma_, token.pos_, token.tag_, token.dep_)
+            # print(token.text, token.lemma_, token.pos_, token.tag_, token.dep_)
+            tkns.append((token.text, token.lemma_, token.pos_, token.tag_, token.dep_))
 
         pos_mapper = {
             # 'NOUN:WP': 'wh',
@@ -51,18 +52,20 @@ class Parser:
             'NOUN:NN': 'propclass',
             'NOUN:NNS': 'propclass',
             'PROPN:NNP': 'entity',
+            'VERB:VB': 'verb',
             'VERB:VBD': 'verb',
             'VERB:VBG': 'verb',
             'VERB:VBZ': 'verb',
             'ADJ:JJ': 'operation',
             'ADJ:JJS': 'operation',
             'ADJ:JJR': 'comparison',
-            'NUM:CD': 'datetime'
+            'NUM:CD': 'datetime',
+            'ADV:WRB': 'when'
         }
 
         operation_triggers = [
             'total', 'average', 'mean']
-        stop_words = ['is', 'the', 'was', 'did']
+        stop_words = ['is', 'the', 'was', 'did', 'do']
         query_types = ['what', "how many", "when", "who"]
 
         mapped_terms = []
@@ -98,6 +101,7 @@ class Parser:
 
         if not all_nns:
             for token in doc:
+                token_tag = token.pos_ + ':' + token.tag_
                 if token.text in stop_words:
                     continue
                 if token.idx >= skip_start_char and token.idx <= skip_end_char:
@@ -270,10 +274,14 @@ class Parser:
             (95, '^(?P<prop>verb-\d*) (?P<entity>.*)$'),
             # (95, '^(?P<verb>verb-\d*) (?P<class>propclass-\d*) (of|for|in)-\d* (?P<class>propclass-\d*)$'),
             
+           
+            (100, '^(?P<when>when-\d*) (?P<subj>entity-\d*) (?P<prop>verb-\d*) (?P<obj>entity-\d*)$'),
+            (105, '^(?P<when>when-\d*) (?P<subj>entity-\d*) (?P<prop>verb-\d*) (?P<entity>.*)$'), 
+            
             # France population
-            (100, '^(?P<entity>.*) (?P<prop>propclass-\d*)$'),
+            (110, '^(?P<entity>.*) (?P<prop>propclass-\d*)$'),
             # Friends theme_song
-            (105, '^(?P<entity>propclass-\d*) (?P<prop>propclass-\d*)$'),
+            (115, '^(?P<entity>propclass-\d*) (?P<prop>propclass-\d*)$'),
 
         ]
 
@@ -298,10 +306,14 @@ class Parser:
             70: {'h': '@op', 's': '@entity', 'p': '@prop', 'o': '$y0', 'v': '$y0', 't': '@time'},
             75: {'h': '@op', 's': '@entity', 'p': '@prop', 'o': '$y0', 'v': '$y0'},
             
-            90: {'h': 'value', 's': '?y0', 'p': '@prop', 'o': '@entity', 'v': '?y0'},
-            95: {'h': 'value', 's': '?y0', 'p': '@prop', 'o': '@entity', 'v': '?y0'},
-            100: {'h': 'value', 's': '@entity', 'p': '@prop', 'o': '?y0', 'v': '?y0'},
-            105: {'h': 'value', 's': '@entity', 'p': '@prop', 'o': '?y0', 'v': '?y0'},
+            90: {'h': 'value', 's': '?y0', 'p': '@prop', 'o': '@entity',  'v': '?y0'},
+            95: {'h': 'value', 's': '?y0', 'p': '@prop', 'o': '@entity',  'v': '?y0'},
+            
+            100: {'h': 'value', 's': '@subj', 'p': '@prop', 'o': '@obj',  't': '?y0', 'v': '?y0'},
+            105: {'h': 'value', 's': '@subj', 'p': '@prop', 'o': '@entity', 't': '?y0', 'v': '?y0'},
+
+            110: {'h': 'value', 's': '@entity', 'p': '@prop', 'o': '?y0', 'v': '?y0'},
+            115: {'h': 'value', 's': '@entity', 'p': '@prop', 'o': '?y0', 'v': '?y0'},
         }
 
         operator_mapping = {
