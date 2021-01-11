@@ -51,8 +51,13 @@ class TestKbs(unittest.TestCase):
         self.assertTrue(result == None, "result should not be None")
     
     def test_getMusicDataTime(self):
-        # when did Dermot sing Giants?
-        a = Alist(**{tt.ID: '1', tt.SUBJECT: 'Dermot', tt.PROPERTY: 'sang', tt.OBJECT: 'Giants',
+        a = Alist(**{tt.ID: '1', tt.SUBJECT: 'Swift', tt.PROPERTY: 'sang', tt.OBJECT: 'Exile',
+                     tt.TIME: '?x', tt.OPVAR: '?x', tt.COST: 1})
+        result = musicbrainz.find_property_values(a, search_element=tt.TIME)
+        self.assertTrue(result == None, "result should not be None")
+    
+    def test_getMusicDataTime2(self):
+        a = Alist(**{tt.ID: '1', tt.SUBJECT: 'Rembrandts', tt.PROPERTY: 'sang', tt.OBJECT: "I'll be there for you",
                      tt.TIME: '?x', tt.OPVAR: '?x', tt.COST: 1})
         result = musicbrainz.find_property_values(a, search_element=tt.TIME)
         self.assertTrue(result == None, "result should not be None")

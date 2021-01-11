@@ -195,6 +195,12 @@ class Infer:
 
         """
         self.last_heartbeat = time.time()
+        prop_refs = []
+        found_facts = []
+        # cannot search if alist has uninstantiated nested variables
+        if alist.uninstantiated_nesting_variables():
+            return found_facts
+
         self.write_trace(
             f"{pcol.MAGENTA}search {alist.id}{pcol.RESET} {alist}{pcol.RESETALL}")
         if alist.state == states.EXPLORED:
@@ -203,12 +209,10 @@ class Infer:
             new_alist.set(tt.OPVAR, alist.get(tt.OPVAR))
             return True
 
-        prop_string = alist.get(tt.PROPERTY)
-        prop_refs = []
-        found_facts = []
+        prop_string = alist.get(tt.PROPERTY)        
         sources = {
-            # 'wikidata': {'fn': wikidata, 'trust': 'low'}, 
-            # 'worldbank': {'fn': worldbank, 'trust': 'high'},
+            'wikidata': {'fn': wikidata, 'trust': 'low'}, 
+            'worldbank': {'fn': worldbank, 'trust': 'high'},
             'musicbrainz': {'fn': musicbrainz, 'trust': 'high'}
             }
         # ,
@@ -258,6 +262,8 @@ class Infer:
                 search_attr = tt.SUBJECT
             elif tt.OBJECT in uninstantiated_variables:
                 search_attr = tt.OBJECT
+            elif tt.TIME in uninstantiated_variables:
+                search_attr = tt.TIME
 
             cache_found_flag = False
             if config.config['use_cache']:

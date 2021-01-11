@@ -6,6 +6,7 @@ Description: Basic wrapper for the MusicBrainz API.
 '''
 
 import requests
+from datetime import datetime
 import urllib.parse
 from frank.alist import Alist
 from frank.alist import Attributes as tt
@@ -78,13 +79,28 @@ def find_propert_time(alist: Alist):
                 artist=alist.get(tt.SUBJECT),
                 title=alist.get(tt.OBJECT),
                 date=None)
+    
+    # parse date formats and sort in reverse
+    FORMATS = ['%Y', '%Y-%m-%d']
+    for r in results:
+        date = ''
+        for fmt in FORMATS:
+            try: 
+                r['date_fmt'] = datetime.now()
+                date = datetime.strptime(r['date'], fmt)
+                r['date'] = date.strftime('%Y')
+            except:
+                pass
+    results_sorted = [k for k in sorted(results, key=lambda x: x['date_fmt'])]
 
-    for item in results:
+
+    for item in results_sorted:
         data_alist = alist.copy()
         data_alist.set(tt.TIME, item['date'])
         data_alist.data_sources = list(
             set(data_alist.data_sources + ['musicbrainz']))
-        alist_arr.append(data_alist)
+        alist_arr.append(data_alist)    
+        break #  greedy; take only the first answer returned
         
     return alist_arr
 
@@ -111,10 +127,11 @@ def find_recording(title=None, artist=None, date=None):
                     break
                 
                 maxScore = item['score']
+                artists = ', '.join([ac['name'] for ac in item['artist-credit'] ])
                 results.append({
                     'title': item['title'], 
                     'date': item['first-release-date'],
-                    'artist': item['artist-credit'][0]['name'],
+                    'artist': artists,
                     'score': item['score']
                 })
 

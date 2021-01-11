@@ -68,17 +68,45 @@ class TestReduce(unittest.TestCase):
         self.G.link(self.alist, self.c5)
         self.G.link(self.alist, self.c6)
         self.G.link(self.alist, self.c7)
-        # self.alist.link_child(self.c1)
-        # self.alist.link_child(self.c2)
-        # self.alist.link_child(self.c3)
-        # self.alist.link_child(self.c4)
-        # self.alist.link_child(self.c5)
-        # self.alist.link_child(self.c6)
-        # self.alist.link_child(self.c7)
+
+        self.G2 = InferenceGraph()
+        self.alist2 = Alist(**{tt.ID: '1', tt.SUBJECT: 'Ghana', tt.PROPERTY: 'P1082',
+                              tt.OBJECT: '?x', tt.TIME: '2020', tt.OPVAR: '?x', tt.COST: 1})       
+
+        self.c21 = Alist(**{tt.ID: '2', tt.SUBJECT: 'Ghana', tt.PROPERTY: 'P1082',
+                           tt.OBJECT: '?x', tt.TIME: '2010', tt.OPVAR: '?x', tt.COST: 1, '?x': ''})
+        self.c21.instantiate_variable('?x', 'a')
+
+        self.c22 = Alist(**{tt.ID: '3', tt.SUBJECT: 'Ghana', tt.PROPERTY: 'P1082',
+                           tt.OBJECT: '?x', tt.TIME: '2011', tt.OPVAR: '?x', tt.COST: 1, '?x': ''})
+        self.c22.instantiate_variable('?x', 'b')
+
+        self.c23 = Alist(**{tt.ID: '4', tt.SUBJECT: 'Ghana', tt.PROPERTY: 'P1082',
+                           tt.OBJECT: '?x', tt.TIME: '2012', tt.OPVAR: '?x', tt.COST: 1, '?x': ''})
+        self.c23.instantiate_variable('?x', 'c')
+
+        self.c24 = Alist(**{tt.ID: '5', tt.SUBJECT: 'Ghana', tt.PROPERTY: 'P1082',
+                           tt.OBJECT: '?x', tt.TIME: '2013', tt.OPVAR: '?x', tt.COST: 1, '?x': ''})
+        self.c24.instantiate_variable('?x', 'd')
+
+        self.c25 = Alist(**{tt.ID: '5', tt.SUBJECT: 'Ghana', tt.PROPERTY: 'P1082',
+                           tt.OBJECT: '?x', tt.TIME: '2014', tt.OPVAR: '?x', tt.COST: 1, '?x': ''})
+        self.c25.instantiate_variable('?x', 'a')
+
+        self.G2.add_alist(self.alist2) 
+        self.G2.link(self.alist2, self.c21)
+        self.G2.link(self.alist2, self.c22)
+        self.G2.link(self.alist2, self.c23)
+        self.G2.link(self.alist2, self.c24)
+        self.G2.link(self.alist2, self.c25)
 
     def test_value(self):
         a = frank.reduce.value.reduce(self.alist, self.G.child_alists(self.alist.id), self.G)
         self.assertTrue(a.instantiation_value(tt.OBJECT), '124')
+    
+    def test_value2(self):
+        a = frank.reduce.value.reduce(self.alist2, self.G2.child_alists(self.alist2.id), self.G2)
+        self.assertTrue(a.instantiation_value(tt.OBJECT), 'a')
 
     def test_values(self):
         a = frank.reduce.values.reduce(self.alist, self.G.child_alists(self.alist.id), self.G)
