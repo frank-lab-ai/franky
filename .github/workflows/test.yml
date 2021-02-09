@@ -22,7 +22,7 @@ jobs:
             ${{ runner.os }}-pip-
       - name: Install dependencies
         if: steps.cache.outputs.cache-hit != 'true'
-        run: pip install -r requirements.txt --use-feature=2020-resolver
+        run: pip install -r requirements.txt
       - name: Install external dependencies
         if: steps.cache.outputs.cache-hit != 'true'
         run: python -m spacy download en_core_web_sm
