@@ -17,7 +17,7 @@ A demo of this reference implementation of FRANK can be found at http://app.fran
 ```
 $ python3 -m venv venv
 $ source venv/bin/activate  # or 'source venv/bin/activate.fish' if using fish-shell
-$ pip install -r requirements.txt --use-feature=2020-resolver
+$ pip install -r requirements.txt
 ```
 
 ## External Dependencies

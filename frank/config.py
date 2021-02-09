@@ -1,3 +1,5 @@
+VERSION = "1.0.0"
+
 # server config
 server = {
     "frank_port": 9876,
@@ -33,7 +35,9 @@ server = {
         "geospatial": ["join", ["isa", "partition"]],
         "product": ["join", ["isa", "feature"]]
     },
-    "use_db": False
+    "use_db": False,
+
+    "user-agent": f"FRANK {VERSION}"
 }
 
 # local config
@@ -71,7 +75,9 @@ local = {
         "geospatial": ["join", ["isa", "partition"]],
         "product": ["join", ["isa", "feature"]]
     },
-    "use_db": False
+    "use_db": False,
+
+    "user-agent": f"FRANK/{VERSION}"
 }
 
 # set to local or server
