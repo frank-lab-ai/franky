@@ -86,12 +86,11 @@ def find_propert_time(alist: Alist):
         date = ''
         for fmt in FORMATS:
             try: 
-                r['date_fmt'] = datetime.now()
                 date = datetime.strptime(r['date'], fmt)
                 r['date'] = date.strftime('%Y')
             except:
                 pass
-    results_sorted = [k for k in sorted(results, key=lambda x: x['date_fmt'])]
+    results_sorted = [k for k in sorted(results, key=lambda x: x['date'])]
 
 
     for item in results_sorted:
@@ -123,21 +122,26 @@ def find_recording(title=None, artist=None, date=None):
         if 'recordings' in obj:
             maxScore = -1
             for item in obj['recordings']:
-                if item['score'] < maxScore:
-                    break
-                
-                maxScore = item['score']
-                artists = ', '.join([ac['name'] for ac in item['artist-credit'] ])
-                results.append({
-                    'title': item['title'], 
-                    'date': item['first-release-date'],
-                    'artist': artists,
-                    'score': item['score']
-                })
-
+                try:
+                    if item['score'] < maxScore:
+                        # if title and item['title'].replace('(TV version)') == title:
+                        #     pass
+                        # else: 
+                        break
+                    
+                    maxScore = item['score']
+                    artists = ', '.join([ac['name'] for ac in item['artist-credit'] ])
+                    results.append({
+                        'title': item['title'], 
+                        'date': item['first-release-date'],
+                        'artist': artists,
+                        'score': item['score']
+                    })
+                except Exception as ex:
+                    print("musicbrainz query error: " + str(ex))
                 
                 # print(f"{item['title']} / {item['first-release-date']} / {item['artist-credit'][0]['name']} / item['score']")
     except Exception as ex:
-        print("conceptnet query error: " + str(ex))
+        print("musicbrainz query error: " + str(ex))
     return results
 
