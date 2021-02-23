@@ -101,7 +101,7 @@ class TestParser(unittest.TestCase):
         self.assertEqual(output['template'], ['propclass', 'propclass'])
 
     def test_parse_when(self):
-        query = "When did Taylor Swift sing Exile"
+        query = "When did Taylor Swift recorded Exile"
         # query = "Ghana population"
         parser = frank.query_parser.parser.Parser()
         output = parser.getNextSuggestion(query)
