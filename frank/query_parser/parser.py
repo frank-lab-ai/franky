@@ -43,7 +43,7 @@ class Parser:
         doc = Parser.nlp_lib(querystring)
         tkns = []
         for token in doc:
-            # print(token.text, token.lemma_, token.pos_, token.tag_, token.dep_)
+            print(token.text, token.lemma_, token.pos_, token.tag_, token.dep_)
             tkns.append((token.text, token.lemma_, token.pos_, token.tag_, token.dep_))
 
         pos_mapper = {
@@ -56,6 +56,7 @@ class Parser:
             'VERB:VBD': 'verb',
             'VERB:VBG': 'verb',
             'VERB:VBZ': 'verb',
+            'VERB:VBN': 'verb',
             'ADJ:JJ': 'operation',
             'ADJ:JJS': 'operation',
             'ADJ:JJR': 'comparison',
