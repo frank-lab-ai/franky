@@ -6,4 +6,4 @@ RUN pip3 install mysqlclient requests pymongo==3.10.1 flask_httpauth flask_cors 
 RUN python3 -m spacy download en
 
 RUN mkdir -p /app/logs/uwsgi
-COPY src/ /app
+COPY ./ /app
