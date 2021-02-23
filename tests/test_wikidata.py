@@ -24,7 +24,7 @@ class TestWikidata(unittest.TestCase):
                  tt.SUBJECT: 'http://www.wikidata.org/entity/Q84'},
                  {}]
         a.set(tt.CONTEXT, ctx1)
-        frank.context.inject_retrieval_context(a)
+        frank.context.inject_retrieval_context(a, "wikidata")
         result = wikidata.find_property_object(a)
         self.assertTrue(len(result) > 0, "should have at least one item")
 
@@ -39,7 +39,7 @@ class TestWikidata(unittest.TestCase):
                  },
                  {}]
         a.set(tt.CONTEXT, ctx1)
-        frank.context.inject_retrieval_context(a)
+        frank.context.inject_retrieval_context(a, "wikidata")
         result = wikidata.find_property_object(a)
         self.assertTrue(len(result) > 0, "should have at least one item")
 
@@ -54,7 +54,7 @@ class TestWikidata(unittest.TestCase):
                  },
                  {}]
         a.set(tt.CONTEXT, ctx1)
-        frank.context.inject_retrieval_context(a)
+        frank.context.inject_retrieval_context(a, "wikidata")
         result = wikidata.find_property_object(a)
         self.assertTrue(len(result) ==0, "should have no item")
 
@@ -69,7 +69,7 @@ class TestWikidata(unittest.TestCase):
                  },
                  {}]
         a.set(tt.CONTEXT, ctx1)
-        frank.context.inject_retrieval_context(a)
+        frank.context.inject_retrieval_context(a, "wikidata")
         result = wikidata.find_property_object(a)
         self.assertTrue(len(result) > 0, "should have at least one item")
         
@@ -85,7 +85,7 @@ class TestWikidata(unittest.TestCase):
                  {}]
         a.set(tt.CONTEXT, ctx1)
         frank.context.inject_query_context(a)
-        frank.context.inject_retrieval_context(a)
+        frank.context.inject_retrieval_context(a, "wikidata")
         result = wikidata.find_property_object(a)
         self.assertTrue(len(result) > 0, "should have at least one item")
         
@@ -132,6 +132,9 @@ class TestWikidata(unittest.TestCase):
         locations = wikidata.find_location_of_entity("London")
         self.assertTrue(len(locations) > 0)
 
+    def test_search_properties_from_rootword(self):
+        prop = wikidata.search_properties("singing")
+        self.assertTrue(len(prop) > 0)
 
 if __name__ == '__main__':
     unittest.main()

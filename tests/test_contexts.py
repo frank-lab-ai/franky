@@ -7,6 +7,7 @@ from frank.util import utils
 import frank.context
 import unittest
 import json
+from frank.graph import InferenceGraph
 
 
 class Test_Contexts(unittest.TestCase):
@@ -67,6 +68,7 @@ class Test_Contexts(unittest.TestCase):
         self.assertEqual(ctx2[0][ctx.accuracy], 'low')
 
     def test_inject_context_inference(self):
+        G = InferenceGraph()
         a = Alist(**{tt.ID: '1', tt.SUBJECT: 'Ghana', tt.PROPERTY: 'P1082', tt.TIME: '2023',
                      tt.OBJECT: '', tt.OPVAR: '?x', tt.COST: 1})
         ctx1 =  [{
@@ -80,10 +82,12 @@ class Test_Contexts(unittest.TestCase):
                  {}
                 ]
         a.set(tt.CONTEXT, ctx1)
-        op_alist = Temporal().decompose(a)
+        G.add_alist(a)
+        op_alist = Temporal().decompose(a, G)
         self.assertEqual(op_alist.get(tt.OP), 'regress')
 
     def test_context_composition(self):
+        G = InferenceGraph()
         a = Alist(**{tt.ID: '1', tt.SUBJECT: 'Ghana', tt.PROPERTY: 'P1082', tt.TIME: '2023',
                      tt.OBJECT: '', tt.OPVAR: '?x', tt.COST: 1})
         ctx1 =  [{
@@ -95,10 +99,11 @@ class Test_Contexts(unittest.TestCase):
                  {}
                 ]
         a.set(tt.CONTEXT, ctx1)
+        G.add_alist(a)
         query_ctx = frank.context.inject_query_context
         # query context should infer the ctx.accuracy from ctx.device
-        op_alist = Temporal().decompose(query_ctx(a))
-        self.assertEqual((op_alist.get(tt.OP), len(op_alist.children)), ('gpregress', 49))
+        op_alist = Temporal().decompose(query_ctx(a), G)
+        self.assertEqual((op_alist.get(tt.OP), len(G.child_alists(op_alist.id))), ('gpregress', 19))
     
 
     def test_search_with_context(self):
@@ -108,9 +113,9 @@ class Test_Contexts(unittest.TestCase):
                                           ctx.device: 'phone', ctx.datetime: '2010-04-30 12:00:00'},
                  {}]
         a.set(tt.CONTEXT, ctx1)
-        a = frank.context.inject_retrieval_context(a)
+        a = frank.context.inject_retrieval_context(a, "wikidata")
         result = wikidata.find_property_object(a)
         v = '0'
         if result:
             v = result[0].get(tt.OBJECT)
-        self.assertAlmostEqual(utils.get_number(v, 0), 24200000, 1)
+        self.assertAlmostEqual(utils.get_number(v, 0), 26908262, 1)

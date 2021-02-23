@@ -27,8 +27,8 @@ class InferenceGraph(nx.DiGraph):
     def display(self):
         # plt.plot()
         pos = nx.spring_layout(self)
-        nx.draw(self, pos=pos, with_labels=True, **
-                {'node_size': 500, 'node_color': 'red', 'width': 1, 'font_size': 8})
+        nx.draw(self, pos=pos, with_labels=True, 
+                **{'node_size': 500, 'node_color': 'red', 'width': 1, 'font_size': 8})
         formatted_edge_labels = {
             (elem[0], elem[1]): edge_labels[elem] for elem in edge_labels}
         nx.draw_networkx_edge_labels(self, pos=pos, edge_labels=edge_labels)

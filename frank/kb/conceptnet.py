@@ -90,7 +90,10 @@ def find_relation_object(entity_name: str, relationName: str):
         results = [edge['end']['label'] for edge in obj['edges']]
     except Exception as ex:
         print("conceptnet query error: " + str(ex))
-    return results
+    return list(set(results))
+
+def find_root_word(entity_name: str):
+    return find_relation_object(entity_name, 'FormOf')
 
 
 def part_of_relation_object(alist: Alist):

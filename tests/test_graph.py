@@ -42,18 +42,20 @@ class Test_Graph(unittest.TestCase):
         alist3 = Alist(**{tt.ID: '102', tt.SUBJECT: 'Africa', tt.PROPERTY: 'P1082',
                          tt.OBJECT: '?x', tt.TIME: '2010', tt.OPVAR: '?x', tt.COST: 1})
         graph.add_alists_from([alist1])  
-        plt.ion()
-        # plt.plot()
-        fig = plt.figure()
-        plt.show()
-        graph.display()  
-        plt.pause(0.3)    
+        # plt.ion()
+        # # plt.plot()
+        # fig = plt.figure()
+        # plt.show()
+        # graph.display()
+        graph.plot_plotly("Graph 1")  
+        # plt.pause(0.3)    
         graph.link(alist1, alist2, edge_label='TP')
         graph.link(alist1, alist3, edge_label='GS')
         edges = graph.edges()  
-        plt.clf()    
-        graph.display()        
-        plt.pause(2)
+        # plt.clf()    
+        # graph.display()        
+        # plt.pause(2)
+        graph.plot_plotly("Graph 2")  
         self.assertTrue(len(edges) > 0)
 
     def create_graph(self):
@@ -103,7 +105,7 @@ class Test_Graph(unittest.TestCase):
 
     def test_get_alist(self):
         graph = self.create_graph()
-        alist = graph.get_alist('111')
+        alist = graph.alist('111')
         self.assertTrue(alist.id == '111')
     
     def test_get_leaves(self):
@@ -119,16 +121,9 @@ class Test_Graph(unittest.TestCase):
 
     def test_prune(self):
         graph = self.create_graph2()
-        plt.ion()
-        fig = plt.figure()
-        plt.show()
-        graph.display()  
-        plt.pause(0.3)    
+        graph.plot_plotly()
         graph.prune('111')
-        edges = graph.edges()  
-        plt.clf()    
-        graph.display()        
-        plt.pause(2)
+        graph.plot_plotly()
     
         self.assertTrue(graph.number_of_nodes() == 2)
     

@@ -3,6 +3,7 @@ import unittest
 from frank.kb import worldbank
 from frank.kb import rdf
 from frank.kb import conceptnet
+from frank.kb import musicbrainz
 from frank.alist import Alist
 from frank.alist import Attributes as tt
 
@@ -39,6 +40,27 @@ class TestKbs(unittest.TestCase):
         result = conceptnet.find_relation_object("P9", "PartOf")
         self.assertTrue(len(result) > 0 , "should not be empty")
 
+    def test_getMusicRecording(self):
+        result = musicbrainz.find_recording(title="Torn", artist="Natalie")
+        self.assertTrue(len(result) > 0, "list should not be empty")
+
+    def test_getMusicDataArtist(self):
+        a = Alist(**{tt.ID: '1', tt.SUBJECT: '?x', tt.PROPERTY: 'sang', tt.OBJECT: 'Giants',
+                     tt.TIME: '2020', tt.OPVAR: '?x', tt.COST: 1})
+        result = musicbrainz.find_property_values(a, search_element=tt.SUBJECT)
+        self.assertTrue(result == None, "result should not be None")
+    
+    def test_getMusicDataTime(self):
+        a = Alist(**{tt.ID: '1', tt.SUBJECT: 'Swift', tt.PROPERTY: 'sang', tt.OBJECT: 'Exile',
+                     tt.TIME: '?x', tt.OPVAR: '?x', tt.COST: 1})
+        result = musicbrainz.find_property_values(a, search_element=tt.TIME)
+        self.assertTrue(result == None, "result should not be None")
+    
+    def test_getMusicDataTime2(self):
+        a = Alist(**{tt.ID: '1', tt.SUBJECT: 'Rembrandts', tt.PROPERTY: 'sang', tt.OBJECT: "I'll be there for you",
+                     tt.TIME: '?x', tt.OPVAR: '?x', tt.COST: 1})
+        result = musicbrainz.find_property_values(a, search_element=tt.TIME)
+        self.assertTrue(result == None, "result should not be None")
 
 if __name__ == '__main__':
     unittest.main()

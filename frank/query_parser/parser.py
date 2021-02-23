@@ -16,7 +16,6 @@ import uuid
 import math
 import numbers
 from collections import deque
-
 import spacy
 import itertools
 import time
@@ -40,38 +39,34 @@ class Parser:
         return self.getNextSuggestion(querystring)
 
     def getNextSuggestion(self, querystring):
-        #starttime = time.time()
-        # print(querystring)
         doc = Parser.nlp_lib(querystring)
-
-        # for token in doc:
-        #     print(token.text, token.lemma_, token.pos_, token.tag_, token.dep_)
+        tkns = []
+        for token in doc:
+            print(token.text, token.lemma_, token.pos_, token.tag_, token.dep_)
+            tkns.append((token.text, token.lemma_, token.pos_, token.tag_, token.dep_))
 
         pos_mapper = {
             # 'NOUN:WP': 'wh',
             'ADP:IN': 'prep',
             'NOUN:NN': 'propclass',
+            'NOUN:NNS': 'propclass',
             'PROPN:NNP': 'entity',
+            'VERB:VB': 'verb',
             'VERB:VBD': 'verb',
             'VERB:VBG': 'verb',
             'VERB:VBZ': 'verb',
+            'VERB:VBN': 'verb',
             'ADJ:JJ': 'operation',
             'ADJ:JJS': 'operation',
             'ADJ:JJR': 'comparison',
-            'NUM:CD': 'datetime'
+            'NUM:CD': 'datetime',
+            'ADV:WRB': 'when'
         }
-
-        # expand templates
-        templates = [
-            ['entity', '$propOfentity'],
-            ['$propOfentity'],
-            #['wh', '$propOfentity'],
-            ['$propOfentity', '$compare', '$propOfentity']
-        ]
 
         operation_triggers = [
             'total', 'average', 'mean']
-        stop_words = ['is', 'the', 'was']
+        stop_words = ['is', 'the', 'was', 'did', 'do']
+        query_types = ['what', "how many", "when", "who"]
 
         mapped_terms = []
         mapped_terms2 = []
@@ -82,89 +77,96 @@ class Parser:
         compound_NN = ''
         compound_PROPCLASS = ''
 
+        # check if all nouns
+        all_nns = True
         for token in doc:
-            if token.text in stop_words:
-                continue
-            if token.idx >= skip_start_char and token.idx <= skip_end_char:
-                continue
-            in_ent = False
-            for ent in doc.ents:
-                if token.idx >= ent.start_char and token.idx <= ent.end_char:
-                    token_tags = token.pos_ + ':' + token.tag_
-                    if token_tags in pos_mapper:
-                        in_ent = True
-                        skip_start_char = ent.start_char
-                        skip_end_char = ent.end_char
-
-                    mapped_terms.append(
-                        [v for k, v in pos_mapper.items() if k == token_tags])
-                    mapped_terms2.append([ent.text.replace('the', '').strip(
-                    ) for k, v in pos_mapper.items() if k == token_tags])
-                    break
-
-            if in_ent == False:
-                skip_start_char = -1
-                skip_end_char = -1
-                if token.tag_ == "JJ" and token.text not in operation_triggers:
-                    compound_PROPCLASS = token.text_with_ws
+            if token.pos_ != 'NOUN':
+                all_nns = False
+                break
+        
+        if all_nns:
+            for token in doc:
+                if token.text in stop_words:
                     continue
+                token_tag = token.pos_ + ':' + token.tag_
+                if token.head.i > token.i + 1:
+                    # do not append head token
+                    if token_tag in pos_mapper:
+                        mapped_terms.append([pos_mapper[token_tag], token.text.strip(), token_tag])
+                if token.head.i == token.i + 1:
+                    # if this token appears just before the head token
+                    token_tag = token.head.pos_ + ':' + token.head.tag_
+                    if token_tag in pos_mapper:
+                        mapped_terms.append([pos_mapper[token_tag], (token.text + ' ' + token.head.text).strip(), token_tag])
 
-            if in_ent == False:
-                skip_start_char = -1
-                skip_end_char = -1
-                token_tags = token.pos_ + ':' + token.tag_
-                if token.dep_ == 'compound' and in_compound == False:
-                    in_compound = True
-                    compound_NN = compound_PROPCLASS + token.text
-                    compound_PROPCLASS = ''
+        if not all_nns:
+            for token in doc:
+                token_tag = token.pos_ + ':' + token.tag_
+                if token.text in stop_words:
+                    continue
+                if token.idx >= skip_start_char and token.idx <= skip_end_char:
+                    continue
+                in_ent = False
+                for ent in doc.ents:
+                    if token.idx >= ent.start_char and token.idx <= ent.end_char:
+                        token_tag = token.pos_ + ':' + token.tag_
+                        if token_tag in pos_mapper:
+                            in_ent = True
+                            skip_start_char = ent.start_char
+                            skip_end_char = ent.end_char                    
+                            mapped_terms.append([pos_mapper[token_tag], ent.text.replace('the', '').strip(), token_tag])
+                        break
 
-                elif token.dep_ != 'compound' and in_compound == True:
-                    compound_NN += ' ' + token.text
-                    mapped_terms.append(
-                        [v for k, v in pos_mapper.items() if k == token_tags])
-                    mapped_terms2.append([compound_NN.strip()])
-                    compound_NN = ''
-                    in_compound = False
+                if in_ent == False:
+                    skip_start_char = -1
+                    skip_end_char = -1
+                    if token.tag_ == "JJ" and token.text not in operation_triggers:
+                        compound_PROPCLASS = token.text_with_ws
+                        continue
 
-                else:
-                    mapped_terms.append(
-                        [v for k, v in pos_mapper.items() if k == token_tags])
-                    mapped_terms2.append(
-                        [compound_PROPCLASS + token.text for k, v in pos_mapper.items() if k == token_tags])
-                    compound_PROPCLASS = ''
+                if in_ent == False:
+                    skip_start_char = -1
+                    skip_end_char = -1
+                    token_tag = token.pos_ + ':' + token.tag_
+                    if token.dep_ == 'compound' and in_compound == False:
+                        in_compound = True
+                        compound_NN = compound_PROPCLASS + token.text
+                        compound_PROPCLASS = ''
 
-        # replace sequence of propclasses with a single propclass
-        template_tokens = [
-            item for sublist in mapped_terms for item in sublist]
-        quest_tokens = [item for sublist in mapped_terms2 for item in sublist]
-        for i in range(len(template_tokens)):
-            if template_tokens[i] == 'prep':
-                template_tokens[i] = quest_tokens[i]
-        tokens_zip = list(zip(template_tokens, quest_tokens))
-        # print(template_tokens)
-        # print(quest_tokens)
-        # print(tokens_zip)
-        try:
-            query_frame = self.GenerateQueryFromRegex(
-                quest_tokens, template_tokens, tokens_zip)
-        except:
-            query_frame = {}
+                    elif token.dep_ != 'compound' and in_compound == True:
+                        compound_NN += ' ' + token.text
+                        if token_tag in pos_mapper:
+                            mapped_terms.append([pos_mapper[token_tag], compound_NN.strip(), token_tag])
+                        compound_NN = ''
+                        in_compound = False
+
+                    else:
+                        if token_tag in pos_mapper:
+                            mapped_terms.append([pos_mapper[token_tag], compound_PROPCLASS + token.text, token_tag])
+                        compound_PROPCLASS = ''
+                        
+        for x in mapped_terms:
+            if x[0] == 'prep':
+                x[0] = x[1]
+
+        query_frame = self.GenerateQueryFromRegex(mapped_terms)
 
         returnObj = {'question': querystring,
-                     'template': template_tokens, 'alist': query_frame}
+                     'template': [x[0] for x in mapped_terms], 
+                     'alist': query_frame}
         return (returnObj)
 
-    def GenerateQueryFromRegex(self, quest_tokens, template_tokens, tokens_zip):
+    def GenerateQueryFromRegex(self, tokens):
         tokens_with_idx = ''
-        for idx in range(len(template_tokens)):
-            tokens_with_idx += template_tokens[idx] + '-' + str(idx) + ' '
+        for idx in range(len(tokens)):
+            tokens_with_idx += tokens[idx][0] + '-' + str(idx) + ' '
         tokens_with_idx = tokens_with_idx.strip()
 
         alist = {}
         is_nested = True
         var_ctr = 3
         (alist, var_ctr, pattern) = self.create_alist(
-            alist, tokens_with_idx, var_ctr, quest_tokens)
+            alist, tokens_with_idx, var_ctr, tokens)
         queue = deque()
         queue = self.scan_alist(alist, queue)
 
@@ -174,14 +176,11 @@ class Parser:
             curr_alist = qitem[0]
             k = qitem[1]
             v = qitem[2]
-            # print("===gen===")
-            # print(v)
-            # print("===genEND===")
             if isinstance(v, str):
                 if len(v.split()) > 0:
                     is_nested = True
                     (sub_alist, var_ctr, pattern) = self.create_alist(
-                        {}, v, var_ctr, quest_tokens)
+                        {}, v, var_ctr, tokens)
 
                     # change other projection vars to aux for pattern where subject is projected
                     if previous_pattern == 70:
@@ -215,6 +214,8 @@ class Parser:
         return alist
 
     def scan_alist(self, alist, queue):
+        if not alist:
+            return queue
         for k, v in alist.items():
             if isinstance(v, dict):
                 queue.append((alist, k, v))
@@ -227,7 +228,7 @@ class Parser:
                 queue.append((alist, k, v.replace('%', '')))
         return queue
 
-    def create_alist(self, alist, _attr_value, var_ctr, quest_tokens):
+    def create_alist(self, alist, _attr_value, var_ctr, tokens):
         curr_year = str(datetime.datetime.now().year)
         regex_patterns = [
             # op X of Y in T
@@ -239,7 +240,7 @@ class Parser:
             (25, '^(?P<prop>propclass-\d*) (of)-\d* (?P<entity>entity-\d*)$'),  # X of Y>
 
 
-            # op X of <nested Y in T
+            # op X of nested Y in T
             (30, '^(?P<op>operation-\d*) (?P<prop>propclass-\d*) (of)-\d* (?P<entity>.*) (in|at)-\d* (?P<time>datetime-\d*)$'),
             # prop of (nested entity in T )
             (32, '^(?P<prop>propclass-\d*) (of)-\d* (?P<entity>(propclass-\d* (in|at)-\d*.*) (in|at)-\d* (datetime-\d*))$'),
@@ -258,39 +259,61 @@ class Parser:
             # country in Africa
             (60, '^(?P<class>propclass-\d*) (in|at)-\d* (?P<loc>entity-\d*)$'),
             (65, '^(?P<class>propclass-\d*)$'),  # country ...
-            #(65, '^(?P<class>propclass-\d*) (with|verb)-\d* (?P<op>operation-\d*) (?P<prop>propclass-\d*) (in|at)-\d* (?P<time>datetime-\d*)$'),
             (70, '^(?P<entity>.*) (with|verb)-\d* (?P<op>operation-\d*) (?P<prop>propclass-\d*) (in|at)-\d* (?P<time>datetime-\d*)$'),
             (75, '^(?P<entity>.*) (with|verb)-\d* (?P<op>operation-\d*) (?P<prop>propclass-\d*)$'),
 
             # comparisons
             # X prop of Y   e.g. is Paris the capital of France.
-            (80, '^(?P<entity>-\d*) (?P<prop>propclass-\d*) (of)-\d* (?P<entity>-\d*)$'),
+            # (80, '^(?P<entity>-\d*) (?P<prop>propclass-\d*) (of)-\d* (?P<entity>-\d*)$'),
+
+            # verb propclass
+            # sang Infinite Things
+            (90, '^(?P<prop>verb-\d*) (of|in|for)-\d* (?P<entity>propclass-\d*)$'),
+
+            # sang <X of/in Y> : nested object
+            (95, '^(?P<prop>verb-\d*) (?P<entity>.*)$'),
+            # (95, '^(?P<verb>verb-\d*) (?P<class>propclass-\d*) (of|for|in)-\d* (?P<class>propclass-\d*)$'),
+            
+           
+            (100, '^(?P<when>when-\d*) (?P<subj>entity-\d*) (?P<prop>verb-\d*) (?P<obj>entity-\d*)$'),
+            (105, '^(?P<when>when-\d*) (?P<subj>entity-\d*) (?P<prop>verb-\d*) (?P<entity>.*)$'), 
+            
+            # France population
+            (110, '^(?P<entity>.*) (?P<prop>propclass-\d*)$'),
+            # Friends theme_song
+            (115, '^(?P<entity>propclass-\d*) (?P<prop>propclass-\d*)$'),
 
         ]
 
         alist_patterns = {
 
-            10:  {'h': '@op',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0',  't': '@time'},
-            15:  {'h': 'value',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0',  't': '@time'},
-            20:  {'h': '@op',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0'},
-            25:  {'h': 'value',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0'},
+            10: {'h': '@op',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0',  't': '@time'},
+            15: {'h': 'value',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0',  't': '@time'},
+            20: {'h': '@op',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0'},
+            25: {'h': 'value',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0'},
 
-            30:  {'h': '@op',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0',  't': '@time'},
-            32:  {'h': 'value',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0'},
-            35:  {'h': 'value',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0',  't': '@time'},
-            40:  {'h': '@op',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0'},
-            45:  {'h': 'value',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0'},
+            30: {'h': '@op',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0',  't': '@time'},
+            32: {'h': 'value',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0'},
+            35: {'h': 'value',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0',  't': '@time'},
+            40: {'h': '@op',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0'},
+            45: {'h': 'value',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0'},
 
-            50:  {'h': '@op',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0',  't': '@time'},
-            55:  {'h': 'value',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0',  't': '@time'},
+            50: {'h': '@op',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0',  't': '@time'},
+            55: {'h': 'value',  'v': '?y0',  's': '@entity',  'p': '@prop',  'o': '?y0',  't': '@time'},
 
-            60:  {'$filter': [{'p': 'type', 'o': '@class'}, {'p': 'location', 'o': '@loc'}]},
-            65:  {'$filter': [{'p': 'type', 'o': '@class'}]},
-            # 65:  {'h': '@op', 's': '?x3', 'p': '@prop', 'o': '$y0', 'v': '$y0', 't': '@time', '?x3':{'$filter': [{'p':'type', 'o': '@class'}]} },
-            70:  {'h': '@op', 's': '@entity', 'p': '@prop', 'o': '$y0', 'v': '$y0', 't': '@time'},
-            75:  {'h': '@op', 's': '@entity', 'p': '@prop', 'o': '$y0', 'v': '$y0'},
-            # comparisons
-            80: {}
+            60: {'$filter': [{'p': 'type', 'o': '@class'}, {'p': 'location', 'o': '@loc'}]},
+            65: {'$filter': [{'p': 'type', 'o': '@class'}]},
+            70: {'h': '@op', 's': '@entity', 'p': '@prop', 'o': '$y0', 'v': '$y0', 't': '@time'},
+            75: {'h': '@op', 's': '@entity', 'p': '@prop', 'o': '$y0', 'v': '$y0'},
+            
+            90: {'h': 'value', 's': '?y0', 'p': '@prop', 'o': '@entity',  'v': '?y0'},
+            95: {'h': 'value', 's': '?y0', 'p': '@prop', 'o': '@entity',  'v': '?y0'},
+            
+            100: {'h': 'value', 's': '@subj', 'p': '@prop', 'o': '@obj',  't': '?y0', 'v': '?y0'},
+            105: {'h': 'value', 's': '@subj', 'p': '@prop', 'o': '@entity', 't': '?y0', 'v': '?y0'},
+
+            110: {'h': 'value', 's': '@entity', 'p': '@prop', 'o': '?y0', 'v': '?y0'},
+            115: {'h': 'value', 's': '@entity', 'p': '@prop', 'o': '?y0', 'v': '?y0'},
         }
 
         operator_mapping = {
@@ -301,64 +324,58 @@ class Parser:
         }
 
         matched_pattern = 1
-        # print(_attr_value)
         kv_pairs = {'': _attr_value}
+        
         for attr, attr_val in kv_pairs.items():
-            # print("***")
-            # print(attr_val)
+            curr_alist = []
             if len(attr_val.split()) < 1 and not isinstance(attr_val, dict) and not isinstance(attr_val, list):
                 continue
+            try:
+                for reg_items in regex_patterns:
+                    #print(reg_items)
+                    idx = reg_items[0]
+                    pattn = reg_items[1]
+                    re.purge()
+                    p = re.compile(pattn)
+                    m = p.match(attr_val.strip())
+                    s = p.sub('#', attr_val)
+                    if m is not None and s == '#':
+                        #print("matched...")
+                        matched_pattern = idx
+                        curr_alist = alist_patterns[idx]
 
-            for reg_items in regex_patterns:
-                # print(reg_items)
-                idx = reg_items[0]
-                pattn = reg_items[1]
-                re.purge()
-                p = re.compile(pattn)
-                m = p.match(attr_val.strip())
-                s = p.sub('#', attr_val)
-                if m is not None and s == '#':
-                    # print("matched...")
-                    matched_pattern = idx
-                    curr_alist = alist_patterns[idx]
-                    #curr_alist['pattern'] = idx
+                        for group_name, matched_str in m.groupdict().items():
+                            for k, v in curr_alist.items():
 
-                    for group_name, matched_str in m.groupdict().items():
-                        for k, v in curr_alist.items():
+                                if v == ('@' + group_name):
+                                    token_idx = matched_str.split('-')
 
-                            if v == ('@' + group_name):
-                                token_idx = matched_str.split('-')
-
-                                if len(token_idx) == 2 and not (matched_pattern in [70, 75] and group_name == "entity"):
-                                    # print("---")
-                                    # print(group_name)
-                                    # print(matched_str)
-                                    # print(token_idx)
-                                    curr_alist[k] = quest_tokens[int(
-                                        token_idx[1])]
-                                    # print(curr_alist[k])
-                                else:
-                                    curr_alist[k] = "%" + matched_str
-                                    # print(curr_alist[k])
-                                break
-                            elif k == '$filter':
-                                for item in curr_alist[k]:
-                                    for x, y in item.items():
-                                        if y == ('@' + group_name):
-                                            token_idx = matched_str.split('-')
-                                            if len(token_idx) == 2:
-                                                item[x] = quest_tokens[int(
-                                                    token_idx[1])]
-                                            else:
-                                                curr_alist[k] = "%" + \
-                                                    matched_str
-                                            break
-                        # print(curr_alist)
-                    break
-            if 'h' in curr_alist and curr_alist['h'] != 'value':
+                                    if len(token_idx) == 2 and not (matched_pattern in [70, 75] and group_name == "entity"):
+                                        curr_alist[k] = tokens[int(token_idx[1])][1]
+                                    else:
+                                        curr_alist[k] = "%" + matched_str
+                            
+                                    # if prop is plural, replace VALUE with VALUES op
+                                    if v == '@prop' and curr_alist['h'] == 'value' and tokens[int(token_idx[1])][2] == 'NOUN:NNS':
+                                        curr_alist['h'] = 'values'
+                                    break
+                                elif k == '$filter':
+                                    for item in curr_alist[k]:
+                                        for x, y in item.items():
+                                            if y == ('@' + group_name):
+                                                token_idx = matched_str.split('-')
+                                                if len(token_idx) == 2:
+                                                    item[x] = tokens[int(token_idx[1])][1]
+                                                else:
+                                                    curr_alist[k] = "%" + \
+                                                        matched_str
+                                                break
+                        break
+            except Exception as ex:
+                print(ex)
+            if 'h' in curr_alist and curr_alist['h'] not in  ['value', 'values']:
                 curr_alist['h'] = operator_mapping[curr_alist['h']]
             alist = curr_alist
-
         return (alist, var_ctr, matched_pattern)
 
     def Sorting(self, lst):

@@ -13,12 +13,27 @@ from frank.alist import Alist
 from frank.alist import Attributes as tt
 from frank import config
 from frank.kb import mongo
+from frank.kb import conceptnet
 import frank.util.utils
 from datetime import datetime
 import frank.dataloader
 
 
 def search_properties(search_term):
+    cache = {
+        'type': ('P31', 'type', 1.0),
+        'sing': ('P175', 'perform', 1.0)
+    }
+    if search_term in cache:
+        return [cache[search_term]]
+    else:
+        # get root word
+        root_word = conceptnet.find_root_word(search_term)
+        root_match = list(set(cache).intersection(root_word))
+        # root_match = list(root_match)
+        if root_match:
+            return [cache[root_match[0]]]
+    
     if config.config['use_db']:
         return search_db_properties(search_term)
     else:
@@ -33,29 +48,26 @@ def search_properties(search_term):
             return []
 
 
-def search_db_properties(search_term):
-    results = []
-    if search_term == 'type':
-        results.append(('P31', 'type'))
-    else:
-        try:
-            # client = MongoClient(host=config.config['mongo_host'], port=config.config['mongo_port'])
-            client = mongo.getClient()
-            db = client[config.config['mongo_db']]
-            db_result = db['wikidataprops'].find(
-                {'$text': {'$search': search_term}}, {
-                    'score': {'$meta': 'textScore'}}
-            )
-            db_result.sort([('score', {'$meta': 'textScore'})]).limit(10)
-            for r in db_result:
-                results.append((r['id'], r['label'], r['score']))
-        except Exception as ex:
-            print('Error retreiving data from MongoDB: ' + str(ex.args))
+def search_db_properties(search_term): 
+    results = []  
+    try:
+        # client = MongoClient(host=config.config['mongo_host'], port=config.config['mongo_port'])
+        client = mongo.getClient()
+        db = client[config.config['mongo_db']]
+        db_result = db['wikidataprops'].find(
+            {'$text': {'$search': search_term}}, {
+                'score': {'$meta': 'textScore'}}
+        )
+        db_result.sort([('score', {'$meta': 'textScore'})]).limit(10)
+        for r in db_result:
+            results.append((r['id'], r['label'], r['score']))
+    except Exception as ex:
+        print('Error retreiving data from MongoDB: ' + str(ex.args))
 
     return results
 
 
-def find_entity(entity_name: str):
+def find_entity(entity_name: str, property_id: str, is_head=True):
     if not isinstance(entity_name, str):
         return ''
     if entity_name.strip() == '':
@@ -73,7 +85,49 @@ def find_entity(entity_name: str):
         params=params
     )
     data = response.json()
-    ids = [x['id'] for x in data['search']]
+    if property_id:
+        ids = []
+        # get domain of property
+        domain = []
+        query_domain = """SELECT DISTINCT ?oLabel WHERE {{
+                    wd:{property_id} p:P2302 ?p .            # statement about property constraints
+                    ?p pq:P2308 ?o .                         # get domain of property
+                    SERVICE wikibase:label {{  bd:serviceParam wikibase:language "en" .  }} }}
+                """.format(property_id=property_id)
+        params = {'format': 'json', 'query': query_domain}
+        response = requests.get(url='https://query.wikidata.org/sparql', params=params)  
+        try:
+            data_domain = response.json()
+            if len(data_domain['results']['bindings']) > 0:
+                domain = [d['oLabel']['value'] for d in data_domain['results']['bindings']]
+
+            # todo get domains from cache
+            if domain:            
+                for d in data['search']:
+                    # get classes of entity and
+                    # check if the instance/subclass paths of the entity include the domain of the property 
+                    query_entity_class = """SELECT DISTINCT ?oLabel WHERE {{
+                            wd:{entity_id} (wdt:P31/wdt:P279*) ?o .  # instance/subclass of entity
+                            SERVICE wikibase:label {{  bd:serviceParam wikibase:language "en" .  }} }}
+                        """.format(entity_id=d['id'])            
+                    params = {'format': 'json', 'query': query_entity_class}
+                    response = requests.get(url='https://query.wikidata.org/sparql', params=params)
+                    
+                    data_class = response.json()
+                    classes = []
+                    if len(data_class['results']['bindings']) > 0:                    
+                        classes = [d['oLabel']['value'] for d in data_class['results']['bindings']]
+
+                    if len(set(domain).intersection(set(classes))) > 0:
+                        ids.append(d['id'])
+                        break  # greedy                 
+
+        except Exception as e:
+            print("wikidata entity analysis error: " + str(e))
+    
+    else:
+        ids = [x['id'] for x in data['search']]
+
     return ids[0] if len(ids) > 0 else ''
 
 
@@ -90,7 +144,7 @@ def find_property_values(alist: Alist, search_element: str):
 
 
 def find_property_subject(alist: Alist):
-    entity_id = find_entity(alist.instantiation_value(tt.OBJECT))
+    entity_id = find_entity(alist.instantiation_value(tt.OBJECT), alist.get(tt.PROPERTY))
     if not entity_id:
         return []
 
@@ -99,7 +153,7 @@ def find_property_subject(alist: Alist):
     if alist.get(tt.TIME):
         query = """
                 SELECT DISTINCT ?sLabel (YEAR(?date) as ?year) WHERE{{
-                ?s wdt:{property_id} wd:{entity_id}.
+                ?s wdt:{property_id} wd:{entity_id}.               
                 OPTIONAL {{wd:{entity_id} pq:P585 ?date .}}
                 SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en".}} }
                 }
@@ -109,7 +163,8 @@ def find_property_subject(alist: Alist):
     else:
         query = """
                 SELECT DISTINCT ?s ?sLabel  WHERE {{
-                ?s wdt:{property_id} wd:{entity_id}.
+                OPTIONAL {{ ?s wdt:{property_id} wd:{entity_id} . }}
+                OPTIONAL {{ wd:{entity_id} wdt:{property_id} ?s . }}   # hack to find inverse triple
                 SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en".}}
                 }}
                 """.format(entity_id=entity_id, property_id=alist.get(tt.PROPERTY))
@@ -141,7 +196,7 @@ def find_property_object(alist: Alist):
         entity_id = alist.instantiation_value(
             tt.SUBJECT)[len(wikidata_base_uri):]
     else:
-        entity_id = find_entity(alist.instantiation_value(tt.SUBJECT))
+        entity_id = find_entity(alist.instantiation_value(tt.SUBJECT), alist.get(tt.PROPERTY))
         if not entity_id:
             return []
 
@@ -232,7 +287,7 @@ def find_propert_time(alist: Alist):
 
 
 def isLocation(entity_name: str, property_id: str):
-    entity_id = find_entity(entity_name)
+    entity_id = find_entity(entity_name, '')
     if not entity_id:
         return []
 
@@ -261,7 +316,7 @@ def findEntitiesOfGivenType(entity_class: str):
     elif entity_class == 'city':
         entity_class_id = 'Q515'
     else:
-        entity_class_id = find_entity(entity_class)
+        entity_class_id = find_entity(entity_class, '')
 
     if not entity_class_id:
         return None
@@ -286,7 +341,7 @@ def findEntitiesOfGivenType(entity_class: str):
 
 
 def find_entity_property_with_id(entity_name: str, property_id: str):
-    entity_id = find_entity(entity_name)
+    entity_id = find_entity(entity_name, '')
     if not entity_id:
         return None
 
@@ -315,13 +370,13 @@ def find_sub_elements(entity_name: str, entity_class: str, sub_class: str):
         property_id = 'P17'
     elif entity_class.lower() == 'continent':
         property_id = 'P30'
-    entity_id = find_entity(entity_name)
+    entity_id = find_entity(entity_name, '')
 
     sub_class_id = ''
     if sub_class.lower() == 'country':
         sub_class_id = 'Q6256'
     else:
-        sub_class_id = find_entity(sub_class)
+        sub_class_id = find_entity(sub_class, '')
     if not entity_id:
         return None
 
@@ -346,7 +401,7 @@ def find_sub_elements(entity_name: str, entity_class: str, sub_class: str):
 
 
 def find_geopolitical_subelements(entity_name: str, sub_class: str):
-    entity_id = find_entity(entity_name)
+    entity_id = find_entity(entity_name, '')
     sub_class_id = 'P30'
     if sub_class.lower() == 'country':
         sub_class_id = 'Q6256'
@@ -355,7 +410,7 @@ def find_geopolitical_subelements(entity_name: str, sub_class: str):
         sub_class_id = 'Q515'
         super_class_id = 'P17'
     else:
-        sub_class_id = find_entity(sub_class)
+        sub_class_id = find_entity(sub_class, '')
     if not entity_id:
         return None
 
