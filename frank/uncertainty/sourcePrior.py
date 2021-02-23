@@ -10,7 +10,6 @@ import numpy as np
 import pandas as pd
 import math
 from frank.config import config
-import frank.uncertainty.sourcePrior as sourcePrior
 from frank.kb import mongo
 import frank.dataloader
 
