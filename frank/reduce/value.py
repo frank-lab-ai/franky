@@ -50,8 +50,11 @@ def reduce(alist: Alist, children: List[Alist], G: InferenceGraph):
 
     if numList or nonNumList:
         if len(numList) >= len(nonNumList):
-            alist.instantiate_variable(
-                alist.get(tt.OPVAR), total / len(children))
+            opVar = alist.get(tt.OPVAR)
+            valueToReturn = total / len(children)
+            if opVar == alist.get(tt.TIME):
+                valueToReturn = str(int(valueToReturn))
+            alist.instantiate_variable(opVar, valueToReturn)
         else:
             # # get modal value
             # valueToReturn = max(nonNumList, key=nonNumList.count)
