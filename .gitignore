@@ -10,3 +10,5 @@ data
 evaluation
 output.json
 plot-*.jpg
+
+.idea/
