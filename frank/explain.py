@@ -5,6 +5,8 @@ Description: Generate explanations for alists and operations.
 
 '''
 
+import re
+
 from frank.alist import Alist
 from frank.alist import Attributes as tt
 from frank.alist import States as states
@@ -12,6 +14,7 @@ from frank.alist import Branching as branching
 from frank.alist import NodeTypes as nt
 from frank import config
 from frank.graph import InferenceGraph
+from frank.util import utils
 
 
 class Explanation():
@@ -33,7 +36,7 @@ class Explanation():
         Saliency ordering: Some decompositions and aggregation operations are not important given their distance
         from the node being explained.
         VALUE nodes based on a LOOKUP decomposition do not need to be explained. State the fact that the value was retrieved.
-        Multiple VALUE nodes from LOOKUPs of a node can be simplified as "values looked up from DISTINCT(sources).
+        Multiple VALUE nodes from LOOKUPs of a node can be simplified as "values" looked up from DISTINCT(sources).
         Any VALUE child node that was not retrieved and hence decomposed for further lookup should be highlighted; but no need to
         specify the details of that operation if it falls outside the explanation blanket.
         Any VALUE node for which instantiation failed should be highlighted in the explanation.
@@ -46,9 +49,9 @@ class Explanation():
         FRANK generates an explanation of length 1 for each node as part of inference.
         To generate an explanation with length > 1, 
             1. ancestors of n*: recursively propagate explanations from parents to their children by appending.
-            This explanation should provide a "causal explanation" or justification of the decomposition operation at n*.
-            2. descendants of n* : recursively propagate and append explantions from child nodes 
-        to their parents. This provides a justification of the aggregation operation at n*.
+                This explanation should provide a "causal explanation" or justification of the decomposition operation at n*.
+            2. descendants of n* : recursively propagate and append explanations from child nodes 
+                to their parents. This provides a justification of the aggregation operation at n*.
             3. at n*: a detailed explanation of any aggregation operation performed at n* and the decomposition performed
 
         Structure of the explanation template:
@@ -61,121 +64,117 @@ class Explanation():
             could not find the population of Ghana in 2017.
 
         Return an object containing a fully composed explanation as well as the partial explanations for WHAT, WHY and HOW.
-
-
         '''
-        explanation = {"all": "", "what": "", "how": "", "why": ""}
+        explanation = {'all': '', 'what': '', 'how': '', 'why': ''}
 
         # get n_star node
         n_star: Alist = G.alist(node_id)
-        if not n_star:
-            return ''
-        ancestors = self.ancestor_explanation(G,
-                                              n_star, "", int(ancestor_blanket_length), 1).strip()
-        descendants = self.descendant_explanation(G,
-                                                  n_star, "", int(descendant_blanket_length), 1).strip()
-        self_exp = f"{n_star.get('what') if 'what' in n_star.attributes else ''} {n_star.get('how') if 'how' in n_star.attributes else ''} "
+        if not n_star: return ''
+        ancestors = self.ancestor_explanation(G, n_star, '', int(ancestor_blanket_length), 1).strip()
+        descendants = self.descendant_explanation(G, n_star, '', int(descendant_blanket_length), 1).strip()
+        descendants = self.pattern_up_descendants(descendants)
+        self_exp = f"{n_star.get(tt.EXPLAIN) if tt.EXPLAIN in n_star.attributes else ''} {n_star.get('what') if 'what' in n_star.attributes else ''} {n_star.get('how') if 'how' in n_star.attributes else ''} "
         sources = self.sources(n_star)
         explanation = {
-            # "all":f"{n_star_exp} {n_dsc} {n_asc}",
-            "what": self_exp,
-            "how": descendants,
-            "why": ancestors,
-            "sources": sources
+            # 'all':f'{self_exp} {n_dsc} {n_asc}',
+            'what': self_exp,
+            'how': descendants,
+            'why': ancestors,
+            'sources': sources
         }
         return explanation
 
     # def summarizeChildren(self, alist: Alist, summary, max_distance, distance):
-        if max_distance < distance:
-            return ''
-
-        if not alist.children:
-            return ''
-
-        feat = ''
-        if alist.parent_decomposition.lower() == 'temporal':
-            feat = tt.TIME
-        elif alist.parent_decomposition.lower() == 'geospatial':
-            feat = tt.SUBJECT
-        elif alist.parent_decomposition.lower() == 'lookup':
-            feat = tt.OBJECT
-        elif alist.parent_decomposition.lower() in ['normalize', 'comp']:
-            feat = alist.get(tt.OPVAR)
-        elif alist.parent_decomposition.lower() == 'comparison':
-            feat = f"?{alist.get(tt.OP)}"
-        elif not alist.parent:
-            feat = alist.get(tt.OPVAR)
-
-        decomps = []
-        ops = []
-        properties = []
-        for child in alist.children:
-            # if alist.parent_decomposition.lower() == 'temporal':
-            feats = feat.split(' ')
-            for ft in feats:
-                if ft in child.attributes:
-                    decomps.append(child.get(ft))
-            # elif alist.parent_decomposition.lower() in  ['normalize','comp']:
-            #   decomps.append(child.get(feat))
-            ops.append(child.get(tt.OP))
-            properties.append(child.get(tt.PROPERTY))
-
-        sources = ''
-        if len(alist.data_sources) == 1:
-            sources = f" from {list(alist.data_sources)[0]}"
-        elif len(alist.data_sources) > 1:
-            sources = f" from {', '.join(list(alist.data_sources)[0:len(alist.data_sources)-1])} and {list(alist.data_sources)[-1]}"
-
-        if alist.parent_decomposition.lower() == 'temporal':
-            data_range = f" between {min(decomps)} and {max(decomps)}"
-            if min(decomps) == max(decomps):
-                data_range = f" in {min(decomps)}"
-            if alist.instantiation_value(alist.get(tt.OPVAR)):
-                # summarize as successful instantiation
-                summary += f" Found {properties[0]} values{data_range}{sources} to predict the {properties[0]} of " + \
-                    f"{alist.instantiation_value(tt.SUBJECT)} in {alist.get(tt.TIME)}. "
-            else:
-                # summarize as unsuccessful instantiation
-                summary += f" Failed to find the {properties[0]} values{data_range}. "
-        elif alist.parent_decomposition.lower() in ['normalize', 'comp']:
-            # todo: be specific about sub-query
-            time = f" in {alist.get(tt.TIME)}" if alist.get(tt.TIME) else ""
-            if alist.get(tt.OP) in ['min', 'max', 'avg', 'mode', 'mean']:
-                summary += f" Solved the sub-query and calculated the {self.ops_text[alist.get(tt.OP)]} of the {alist.get(tt.PROPERTY)}{time}."
-            elif alist.get(tt.OP) in ['comp'] and decomps:
-                listed_str = ''
-                for dc in decomps:
-                    listed = dc.split(',')
-                    if len(listed) > 8:
-                        listed_str += f"{', '.join(listed[0:8])}, etc. "
-                    else:
-                        listed_str += ', '.join(listed)
-                summary += f" Found these as solutions to the sub-query: {listed_str}."
-            else:
-                if alist.get(tt.PROPERTY):
-                    summary += f" Solved the sub-query and calculated the {self.ops_text[alist.get(tt.OP)]} of the {alist.get(tt.PROPERTY)} of " + \
-                        f"{alist.instantiation_value(tt.SUBJECT)}{time}."
-                else:
-                    summary += ' ' + alist.get(tt.EXPLAIN)
-        elif not alist.parent:
-            for child in alist.children:
-                summary += self.summarizeNode(child, False)
-
-        for child in alist.children:
-            csumm = self.summarizeChildren(
-                child, summary, max_distance, distance+1)
-            summary = csumm if csumm else summary
-
-        return summary
+    #     if max_distance < distance:
+    #         return ''
+    #
+    #     if not alist.children:
+    #         return ''
+    #
+    #     feat = ''
+    #     if alist.parent_decomposition.lower() == 'temporal':
+    #         feat = tt.TIME
+    #     elif alist.parent_decomposition.lower() == 'geospatial':
+    #         feat = tt.SUBJECT
+    #     elif alist.parent_decomposition.lower() == 'lookup':
+    #         feat = tt.OBJECT
+    #     elif alist.parent_decomposition.lower() in ['normalize', 'comp']:
+    #         feat = alist.get(tt.OPVAR)
+    #     elif alist.parent_decomposition.lower() == 'comparison':
+    #         feat = f"?{alist.get(tt.OP)}"
+    #     elif not alist.parent:
+    #         feat = alist.get(tt.OPVAR)
+    #
+    #     decomps = []
+    #     ops = []
+    #     properties = []
+    #     for child in alist.children:
+    #         # if alist.parent_decomposition.lower() == 'temporal':
+    #         feats = feat.split(' ')
+    #         for ft in feats:
+    #             if ft in child.attributes:
+    #                 decomps.append(child.get(ft))
+    #         # elif alist.parent_decomposition.lower() in  ['normalize','comp']:
+    #         #   decomps.append(child.get(feat))
+    #         ops.append(child.get(tt.OP))
+    #         properties.append(child.get(tt.PROPERTY))
+    #
+    #     sources = ''
+    #     if len(alist.data_sources) == 1:
+    #         sources = f" from {list(alist.data_sources)[0]}"
+    #     elif len(alist.data_sources) > 1:
+    #         sources = f" from {', '.join(list(alist.data_sources)[0:len(alist.data_sources)-1])} and {list(alist.data_sources)[-1]}"
+    #
+    #     if alist.parent_decomposition.lower() == 'temporal':
+    #         data_range = f" between {min(decomps)} and {max(decomps)}"
+    #         if min(decomps) == max(decomps):
+    #             data_range = f" in {min(decomps)}"
+    #         if alist.instantiation_value(alist.get(tt.OPVAR)):
+    #             # summarize as successful instantiation
+    #             summary += f" Found {properties[0]} values{data_range}{sources} to predict the {properties[0]} of " + \
+    #                 f"{alist.instantiation_value(tt.SUBJECT)} in {alist.get(tt.TIME)}. "
+    #         else:
+    #             # summarize as unsuccessful instantiation
+    #             summary += f" Failed to find the {properties[0]} values{data_range}. "
+    #     elif alist.parent_decomposition.lower() in ['normalize', 'comp']:
+    #         # todo: be specific about sub-query
+    #         time = f" in {alist.get(tt.TIME)}" if alist.get(tt.TIME) else ""
+    #         if alist.get(tt.OP) in ['min', 'max', 'avg', 'mode', 'mean']:
+    #             summary += f" Solved the sub-query and calculated the {self.ops_text[alist.get(tt.OP)]} of the {alist.get(tt.PROPERTY)}{time}."
+    #         elif alist.get(tt.OP) in ['comp'] and decomps:
+    #             listed_str = ''
+    #             for dc in decomps:
+    #                 listed = dc.split(',')
+    #                 if len(listed) > 8:
+    #                     listed_str += f"{', '.join(listed[0:8])}, etc. "
+    #                 else:
+    #                     listed_str += ', '.join(listed)
+    #             summary += f" Found these as solutions to the sub-query: {listed_str}."
+    #         else:
+    #             if alist.get(tt.PROPERTY):
+    #                 summary += f" Solved the sub-query and calculated the {self.ops_text[alist.get(tt.OP)]} of the {alist.get(tt.PROPERTY)} of " + \
+    #                     f"{alist.instantiation_value(tt.SUBJECT)}{time}."
+    #             else:
+    #                 summary += ' ' + alist.get(tt.EXPLAIN)
+    #     elif not alist.parent:
+    #         for child in alist.children:
+    #             summary += self.summarizeNode(child, False)
+    #
+    #     for child in alist.children:
+    #         csumm = self.summarizeChildren(
+    #             child, summary, max_distance, distance+1)
+    #         summary = csumm if csumm else summary
+    #
+    #     return summary
 
     # def summarizeParents(self, alist: Alist, summary, max_distance, distance):
-
+    #
     #     if distance <= max_distance:
-
+    #
     #         for parent in alist.parent:
     #             time = f" in {parent.get(tt.TIME)}" if parent.get(
     #                 tt.TIME) else ""
-
+    #
     #             if alist.parent_decomposition.lower() == 'temporal':
     #                 if alist.get(tt.OP).lower() == 'regress':
     #                     summary = f" Had to predict the {parent.get(tt.PROPERTY)} of {parent.instantiation_value(tt.SUBJECT)}{time} " + \
@@ -204,116 +203,116 @@ class Explanation():
     #     return summary
 
     # def summarizeNode(self, alist: Alist, in_place=True):
-        ''' generate explanation for node, assign to alist attribute in place and return the explanation'''
-        summary = ''
-        try:
-            if len(alist.data_sources) == 1:
-                sources = f"{list(alist.data_sources)[0]}".strip()
-            elif len(alist.data_sources) > 1:
-                sources = f"{', '.join(list(alist.data_sources)[0:len(alist.data_sources)-1])} and {list(alist.data_sources)[-1]}".strip(
-                )
-
-            comp_in_child = False
-            if alist.parent_decomposition.lower() == 'temporal' and alist.instantiation_value(alist.get(tt.OPVAR)):
-                summary = f"The predicted {alist.get(tt.PROPERTY)} of {alist.instantiation_value(tt.SUBJECT)} " + \
-                    f"in {alist.get(tt.TIME)} using a regression function based on {alist.get(tt.PROPERTY)} " + \
-                    f"data from past times is {alist.instantiation_value(alist.get(tt.OPVAR))}."
-                # f"data from past times is {list(alist.projection_variables().values())[0]}."
-            elif alist.parent_decomposition.lower() == 'geospatial' and alist.instantiation_value(tt.SUBJECT):
-                summary = f"Found the constituents of {alist.instantiation_value(tt.SUBJECT)}."
-            elif alist.parent_decomposition.lower() == 'lookup' and sources:
-                # if len(alist.data_sources) ==1:
-                #   sources = f" from {list(alist.data_sources)[0]}"
-                # elif len(alist.data_sources) > 1:
-                #   sources = f" from {', '.join(list(alist.data_sources)[0:len(alist.data_sources)-1])} and {list(alist.data_sources)[-1]}"
-                summary = f"Facts were retrieved from the {sources} knowledge base(s)."
-
-            elif alist.parent_decomposition.lower() in ['normalize', 'comp']:
-                # sources = ' '.join(alist.data_sources)
-                filter_exp = ""
-                counter = 0
-                for child in alist.children:
-                    if child.get(tt.PROPERTY).startswith("__geopolitical"):
-                        if len(filter_exp) > 0:
-                            filter_exp = filter_exp + " and "
-                        ctype = child.get(tt.PROPERTY).split(":")[1]
-                        filter_exp = filter_exp + f"to find entities that have type {ctype}" + \
-                            f" and are located in {child.instantiation_value(tt.OBJECT)}"
-                    elif child.get(tt.OP).lower() == "values":
-                        if len(filter_exp) > 0:
-                            filter_exp = filter_exp + " and "
-                        filter_exp = filter_exp + f"to find entities that have a {child.get(tt.PROPERTY)} of " + \
-                            f"'{child.get(tt.PROPERTY)}'"
-                    else:
-                        if child.instantiation_value(tt.OBJECT):
-                            if counter == 0:
-                                if len(filter_exp) > 0:
-                                    filter_exp = filter_exp + " and "
-                                filter_exp = filter_exp + f"to find the {child.get(tt.PROPERTY)} of " + \
-                                    f"{child.instantiation_value(tt.SUBJECT)} ({child.instantiation_value(tt.OBJECT)})"
-                            elif counter > 0 and counter <= 5:
-                                filter_exp = filter_exp + \
-                                    f", {child.instantiation_value(tt.SUBJECT)} ({child.instantiation_value(tt.OBJECT)})"
-                            elif counter == 6:
-                                filter_exp = filter_exp + ", etc"
-                        else:
-                            if counter == 0:
-                                if len(filter_exp) > 0:
-                                    filter_exp = filter_exp + " and "
-                                filter_exp = filter_exp + f"to find the {child.get(tt.PROPERTY)} of" + \
-                                    f"{child.instantiation_value(tt.SUBJECT)}"
-                            elif counter > 0 and counter <= 5:
-                                filter_exp = filter_exp + \
-                                    f", {child.instantiation_value(tt.SUBJECT)}"
-                            elif counter == 6:
-                                filter_exp = filter_exp + ", etc"
-                        counter += 1
-                if filter_exp.strip():
-                    summary = f"Evaluated the sub-query {filter_exp}."
-
-            # * generate explanation for reduce operation.
-            reduce_exp = ""
-            # * explain any subqueries set comps in children nodes
-            time = "" if alist.get(
-                tt.TIME) == '' else "in " + alist.get(tt.TIME)
-
-            opDesc = ""
-            if alist.get(tt.OP).lower() not in ["value", "values", "comp", "regress", "nnpredict", "gt", "gte", "lt", "lte", "eq"]:
-                inferred_value = alist.instantiation_value(alist.get(tt.OPVAR))
-                proj_var = alist.projection_variables()
-                if len(proj_var) > 0 and alist.get(list(proj_var.keys())[0]):
-                    inferred_value = alist.instantiation_value(
-                        list(proj_var.keys())[0])
-                opDesc = f" Calculated the {self.ops_text[alist.get(tt.OP)]} of the {alist.get(tt.PROPERTY)} {time} " + \
-                    f"for the entities. Inferred value is {inferred_value}."
-                if opDesc not in reduce_exp:
-                    reduce_exp = reduce_exp.strip() + opDesc
-            elif alist.get(tt.OP).lower() == "value":
-                if alist.get(tt.PROPERTY) and alist.instantiation_value(tt.SUBJECT):
-                    opDesc = f" The {self.ops_text[alist.get(tt.OP)]} of the {alist.get(tt.PROPERTY)} of " + \
-                        f"{alist.instantiation_value(tt.SUBJECT)} {time} is {alist.instantiation_value(tt.OBJECT)}."
-                    if opDesc not in reduce_exp:
-                        reduce_exp = reduce_exp.strip() + opDesc
-            elif alist.get(tt.OP).lower() in ["gt", "gte", "lt", "lte", "eq"]:
-                proj_var = f"?{alist.get(tt.OP).lower()}"
-                cmp_vars = alist.get(tt.OPVAR).split(' ')
-                if alist.is_instantiated(proj_var) and bool(alist.instantiation_value(proj_var)):
-                    opDesc = f"The comparison returned True since {alist.instantiation_value(cmp_vars[0])} is {self.ops_text[alist.get(tt.OP)]} {alist.instantiation_value(cmp_vars[1])}."
-                if opDesc not in reduce_exp:
-                    reduce_exp = reduce_exp.strip() + opDesc
-
-            summary = (reduce_exp + " " + summary).strip()
-            # assign explanation to node (and to its parent).
-            if in_place:
-                alist.set(tt.EXPLAIN, summary)
-                if len(alist.parent) > 0 and \
-                        not len(summary.strip()) > 0 and \
-                        reduce_exp not in alist.parent[0].get(tt.EXPLAIN):
-                    alist.parent[0].set(tt.EXPLAIN, summary)
-        except Exception as ex:
-            print("error generating explanation: " + str(ex))
-
-        return summary
+    #     ''' generate explanation for node, assign to alist attribute in place and return the explanation'''
+    #     summary = ''
+    #     try:
+    #         if len(alist.data_sources) == 1:
+    #             sources = f"{list(alist.data_sources)[0]}".strip()
+    #         elif len(alist.data_sources) > 1:
+    #             sources = f"{', '.join(list(alist.data_sources)[0:len(alist.data_sources)-1])} and {list(alist.data_sources)[-1]}".strip(
+    #             )
+    #
+    #         comp_in_child = False
+    #         if alist.parent_decomposition.lower() == 'temporal' and alist.instantiation_value(alist.get(tt.OPVAR)):
+    #             summary = f"The predicted {alist.get(tt.PROPERTY)} of {alist.instantiation_value(tt.SUBJECT)} " + \
+    #                 f"in {alist.get(tt.TIME)} using a regression function based on {alist.get(tt.PROPERTY)} " + \
+    #                 f"data from past times is {alist.instantiation_value(alist.get(tt.OPVAR))}."
+    #             # f"data from past times is {list(alist.projection_variables().values())[0]}."
+    #         elif alist.parent_decomposition.lower() == 'geospatial' and alist.instantiation_value(tt.SUBJECT):
+    #             summary = f"Found the constituents of {alist.instantiation_value(tt.SUBJECT)}."
+    #         elif alist.parent_decomposition.lower() == 'lookup' and sources:
+    #             # if len(alist.data_sources) ==1:
+    #             #   sources = f" from {list(alist.data_sources)[0]}"
+    #             # elif len(alist.data_sources) > 1:
+    #             #   sources = f" from {', '.join(list(alist.data_sources)[0:len(alist.data_sources)-1])} and {list(alist.data_sources)[-1]}"
+    #             summary = f"Facts were retrieved from the {sources} knowledge base(s)."
+    #
+    #         elif alist.parent_decomposition.lower() in ['normalize', 'comp']:
+    #             # sources = ' '.join(alist.data_sources)
+    #             filter_exp = ""
+    #             counter = 0
+    #             for child in alist.children:
+    #                 if child.get(tt.PROPERTY).startswith("__geopolitical"):
+    #                     if len(filter_exp) > 0:
+    #                         filter_exp = filter_exp + " and "
+    #                     ctype = child.get(tt.PROPERTY).split(":")[1]
+    #                     filter_exp = filter_exp + f"to find entities that have type {ctype}" + \
+    #                         f" and are located in {child.instantiation_value(tt.OBJECT)}"
+    #                 elif child.get(tt.OP).lower() == "values":
+    #                     if len(filter_exp) > 0:
+    #                         filter_exp = filter_exp + " and "
+    #                     filter_exp = filter_exp + f"to find entities that have a {child.get(tt.PROPERTY)} of " + \
+    #                         f"'{child.get(tt.PROPERTY)}'"
+    #                 else:
+    #                     if child.instantiation_value(tt.OBJECT):
+    #                         if counter == 0:
+    #                             if len(filter_exp) > 0:
+    #                                 filter_exp = filter_exp + " and "
+    #                             filter_exp = filter_exp + f"to find the {child.get(tt.PROPERTY)} of " + \
+    #                                 f"{child.instantiation_value(tt.SUBJECT)} ({child.instantiation_value(tt.OBJECT)})"
+    #                         elif counter > 0 and counter <= 5:
+    #                             filter_exp = filter_exp + \
+    #                                 f", {child.instantiation_value(tt.SUBJECT)} ({child.instantiation_value(tt.OBJECT)})"
+    #                         elif counter == 6:
+    #                             filter_exp = filter_exp + ", etc"
+    #                     else:
+    #                         if counter == 0:
+    #                             if len(filter_exp) > 0:
+    #                                 filter_exp = filter_exp + " and "
+    #                             filter_exp = filter_exp + f"to find the {child.get(tt.PROPERTY)} of" + \
+    #                                 f"{child.instantiation_value(tt.SUBJECT)}"
+    #                         elif counter > 0 and counter <= 5:
+    #                             filter_exp = filter_exp + \
+    #                                 f", {child.instantiation_value(tt.SUBJECT)}"
+    #                         elif counter == 6:
+    #                             filter_exp = filter_exp + ", etc"
+    #                     counter += 1
+    #             if filter_exp.strip():
+    #                 summary = f"Evaluated the sub-query {filter_exp}."
+    #
+    #         # * generate explanation for reduce operation.
+    #         reduce_exp = ""
+    #         # * explain any subqueries set comps in children nodes
+    #         time = "" if alist.get(
+    #             tt.TIME) == '' else "in " + alist.get(tt.TIME)
+    #
+    #         opDesc = ""
+    #         if alist.get(tt.OP).lower() not in ["value", "values", "comp", "regress", "nnpredict", "gt", "gte", "lt", "lte", "eq"]:
+    #             inferred_value = alist.instantiation_value(alist.get(tt.OPVAR))
+    #             proj_var = alist.projection_variables()
+    #             if len(proj_var) > 0 and alist.get(list(proj_var.keys())[0]):
+    #                 inferred_value = alist.instantiation_value(
+    #                     list(proj_var.keys())[0])
+    #             opDesc = f" Calculated the {self.ops_text[alist.get(tt.OP)]} of the {alist.get(tt.PROPERTY)} {time} " + \
+    #                 f"for the entities. Inferred value is {inferred_value}."
+    #             if opDesc not in reduce_exp:
+    #                 reduce_exp = reduce_exp.strip() + opDesc
+    #         elif alist.get(tt.OP).lower() == "value":
+    #             if alist.get(tt.PROPERTY) and alist.instantiation_value(tt.SUBJECT):
+    #                 opDesc = f" The {self.ops_text[alist.get(tt.OP)]} of the {alist.get(tt.PROPERTY)} of " + \
+    #                     f"{alist.instantiation_value(tt.SUBJECT)} {time} is {alist.instantiation_value(tt.OBJECT)}."
+    #                 if opDesc not in reduce_exp:
+    #                     reduce_exp = reduce_exp.strip() + opDesc
+    #         elif alist.get(tt.OP).lower() in ["gt", "gte", "lt", "lte", "eq"]:
+    #             proj_var = f"?{alist.get(tt.OP).lower()}"
+    #             cmp_vars = alist.get(tt.OPVAR).split(' ')
+    #             if alist.is_instantiated(proj_var) and bool(alist.instantiation_value(proj_var)):
+    #                 opDesc = f"The comparison returned True since {alist.instantiation_value(cmp_vars[0])} is {self.ops_text[alist.get(tt.OP)]} {alist.instantiation_value(cmp_vars[1])}."
+    #             if opDesc not in reduce_exp:
+    #                 reduce_exp = reduce_exp.strip() + opDesc
+    #
+    #         summary = (reduce_exp + " " + summary).strip()
+    #         # assign explanation to node (and to its parent).
+    #         if in_place:
+    #             alist.set(tt.EXPLAIN, summary)
+    #             if len(alist.parent) > 0 and \
+    #                     not len(summary.strip()) > 0 and \
+    #                     reduce_exp not in alist.parent[0].get(tt.EXPLAIN):
+    #                 alist.parent[0].set(tt.EXPLAIN, summary)
+    #     except Exception as ex:
+    #         print("error generating explanation: " + str(ex))
+    #
+    #     return summary
 
     def why(self, G: InferenceGraph,  alist: Alist, decomp_op, in_place=True):
         ''' Explain a decomposition of this alist. 
@@ -453,10 +452,8 @@ class Explanation():
         if length <= max_length:
             # for parent in alist.parent:
             for parent in G.parent_alists(alist.id):
-                summary = f"{parent.get('why') if 'why' in parent.attributes else ''} {summary}".strip(
-                )
-                summary = self.ancestor_explanation(
-                    G, parent, summary, max_length, length+1)
+                summary = f"{parent.get('why') if 'why' in parent.attributes else ''} {summary}".strip()
+                summary = self.ancestor_explanation(G, parent, summary, max_length, length+1)
         return summary
 
     def descendant_explanation(self, G: InferenceGraph, alist: Alist, summary, max_length, length):
@@ -465,6 +462,22 @@ class Explanation():
             for child in G.child_alists(alist.id):
                 summary = f"{summary}{' ' + child.get('how') if 'how' in child.attributes else ''}" + \
                     f"{' ' + child.get('what') if 'what' in child.attributes else ''}".strip()
-                summary = self.descendant_explanation(
-                    G, child, summary, max_length, length+1)
+                summary = self.descendant_explanation(G, child, summary, max_length, length+1)
         return summary
+
+    def pattern_up_descendants(self, descendants):
+        '''Turn a series of similar concatenated strings to the few unique patterns followed by their differing numerical values'''
+        descs = [d[:-1] if d[-1] == '.' else d for d in descendants.split('. ')]
+        is_patt = r' ([\w\.]+) is ([\w\.]+)$'
+        i, groups = 0, []
+        while descs:
+            if match := re.search(r'^(.+)'+ is_patt, descs[i]):
+                p = re.compile(match[1] + is_patt) # vv at least one match guaranteed below => the LHS pattern match is safe
+                inds, xs, ys = tuple(zip(*[(j, utils.get_number(m[1], m[1]), utils.get_number(m[2], m[2])) for j in range(i, len(descs)) if (m := re.match(p, descs[j])) if m]))
+                descs = [descs[j] for j in range(len(descs)) if j not in inds]
+                if simpler := re.match(r'The value of the ([\w\s]+) in', match[1]): groups.append((True, simpler[1], xs, ys))
+                else: groups.append((False, match[1], xs, ys))
+            else: groups.append((descs[i], None, None))
+        return ' '.join([(f'The values of the {txt} are ' if simple else f'{txt}: ') + f'{list(zip(xs, ys))}.' for simple, txt, xs, ys in groups])
+
+

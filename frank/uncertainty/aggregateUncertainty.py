@@ -40,8 +40,7 @@ def estimate_uncertainty(nodes: list, all_numeric: bool, operation: str, child_c
 
         if not utils.is_numeric(combined_confidence):
             combined_confidence = 0.0
-        combined_confidence = combined_confidence + \
-            (combined_confidence * missRatio)
+        combined_confidence = combined_confidence + (combined_confidence * missRatio)
 
     except Exception as e:
         print("Uncertainty aggregate error: " + str(e))

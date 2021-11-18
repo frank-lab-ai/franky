@@ -136,7 +136,7 @@ class Alist:
     #     child.parent.append(self)
 
     def copy(self):
-        """ create a copy of the alist"""
+        """create a copy of the alist"""
         new_alist_attrs = deepcopy(self.attributes)
         new_alist = Alist(**new_alist_attrs)
         new_alist.id = "0"
