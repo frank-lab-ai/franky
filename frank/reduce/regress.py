@@ -4,9 +4,15 @@ Description: Linear regression reduce operation
 
 
 '''
+import SMART.Tagger.EDA
 import numpy as np
+import pandas as pd
 from sklearn.linear_model import LinearRegression
-from typing import List
+
+from SMART.Reasoner.reasoner import *
+from SMART.Methods.catalogue import *
+from SMART.Tagger.tagger import *
+
 from frank.alist import Alist
 from frank.alist import Attributes as tt
 from frank.alist import VarPrefix as vx
@@ -18,38 +24,58 @@ from frank.uncertainty.aggregateUncertainty import estimate_uncertainty
 from frank.reduce import propagate
 from frank.graph import InferenceGraph
 
+from typing import List
+
 
 def reduce(alist: Alist, children: List[Alist], G: InferenceGraph):
-    y_predict = None
-    X = []
-    y = []
-    data_pts = []
+    X, y, data_pts = [], [], []
+
     for c in children:
         opVarValue = c.instantiation_value(c.get(tt.OPVAR))
         if utils.is_numeric(opVarValue) and utils.is_numeric(c.get(tt.TIME)):
             x_val = utils.get_number(c.get(tt.TIME), None)
             y_val = utils.get_number(opVarValue, None)
-            X.append([x_val])
+            X.append(x_val)
             y.append(y_val)
             data_pts.append([x_val, y_val])
-    X = np.array(X)
-    y = np.array(y)
-    reg = LinearRegression().fit(X, y)
-    x_predict = utils.get_number(alist.get(tt.TIME), None)
-    y_predict = reg.predict(np.array([[x_predict]]))[0]
-    prediction = [x_predict, y_predict]
-    coeffs = [v for v in reg.coef_]
-    coeffs.insert(0, reg.intercept_)
-    fnStr = 'LIN;' + ';'.join([str(v) for v in reg.coef_])
-    fnAndData = \
-        """{{"function":{coeffs}, "data":{data_pts}, "prediction":{prediction}}}""".format(
-            coeffs=coeffs, data_pts=data_pts, prediction=prediction)
 
-    alist.instantiate_variable(alist.get(tt.OPVAR), y_predict)
-    alist.set(tt.FNPLOT, fnAndData)
+    if len(X) == 1:
+        # own_CoV = 1
+        fnAndData = '{{"function":{coeffs}, "data":{data_pts}, "prediction":{prediction}}}'.format(
+            coeffs = None, data_pts = data_pts, prediction = data_pts)
+        alist.instantiate_variable(alist.get(tt.OPVAR), y[0])
+        alist.set(tt.FNPLOT, fnAndData)
+    else:
+        df = pd.DataFrame({alist.get(tt.PROPERTY): y, tt.TIME: X})
+        rs = new_reasoner()
+        rs.state = initialise_state(rs.state, query_alist = {}, df = df,
+            __tag_list_fields_extras = dict(Query = alist.get('cx')[3]['Query Tags'] + [])) # Add 'Multivariate', 'Refined' to force GLM
 
-    alist.instantiate_variable(tt.COV, estimate_uncertainty(
-        children, len(data_pts) == len(
-            children), alist.get(tt.OP), len(children)
-    ))
+        rs.consecutive_steps([['Distribution']], [['Method']])
+
+        method = fetch_tags_warn(rs, 'Method')
+        mod = method_catalogue[method](rs)
+        mod.apply(df)
+
+        expl = mod.text_explanation()
+        alist.set(tt.EXPLAIN, expl)
+
+        x_predict = [utils.get_number(alist.get(tt.TIME), None)]
+        prediction = mod.predict(pd.DataFrame({tt.TIME: x_predict}))
+
+        # own_CoV = (abs(prediction['Upper'] - prediction['Lower']) / (2 * prediction['Pred']))[0]
+
+        alist.instantiate_variable(alist.get(tt.OPVAR), prediction['Pred'][0])
+
+        pl = mod.plot(plotly = True)
+        alist.set(tt.FNPLOT, pl.to_json())
+
+        ## Other possibly useful model info
+        # mod.extract_params()
+
+    child_CoV = estimate_uncertainty(children, len(data_pts) == len(children), alist.get(tt.OP), len(children))
+    alist.instantiate_variable(tt.COV, child_CoV)# * own_CoV)
+
     return alist
+
+

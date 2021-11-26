@@ -31,7 +31,7 @@ class Launcher():
         self.inference_graphs = {}
 
     def start(self, alist: Alist, session_id, inference_graphs):
-        ''' Create new inference graph to infere answer'''
+        ''' Create new inference graph to infer answer'''
         G = InferenceGraph()
         self.frank_infer = Infer(G)
         self.frank_infer.session_id = session_id
@@ -39,11 +39,12 @@ class Launcher():
         self.start_time = time.time()
         self.frank_infer.last_heartbeat = time.time()
         alist = frank.context.inject_query_context(alist)
+        # Hardcoded query tags for the moment; NL-parsing functions will handle it instead
+        alist.set(tt.CONTEXT, alist.get(tt.CONTEXT) + [{'Query Tags': ['Prediction', 'Fast', 'Frequentist']}])
         self.frank_infer.enqueue_root(alist)
         self.schedule(-1)
 
     def api_start(self, alist_obj, session_id, inference_graphs):
-
         a = Alist(**alist_obj)
         t = threading.Thread(target=self.start, args=(
             a, session_id, inference_graphs))
@@ -51,9 +52,7 @@ class Launcher():
         return session_id
 
     def schedule(self, last_root_prop_depth):
-        ''' Loop through the leaves of the inference graph and 
-        schedule nodes to resolve.
-        '''
+        ''' Loop through the leaves of the inference graph and schedule nodes to resolve'''
         if time.time() - self.frank_infer.last_heartbeat > self.timeout:
             # stop and print any answer found
             self.cache_and_print_answer(True)
