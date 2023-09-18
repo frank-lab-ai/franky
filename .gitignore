@@ -1,3 +1,4 @@
+.gitignore
 __pycache__
 venv/
 .vscode
@@ -10,3 +11,11 @@ data
 evaluation
 output.json
 plot-*.jpg
+.mac-env
+.DS_STORE
+.mac-env_3.10
+api_keys.py
+data-text-explanations.ipynb
+requirements_3.10.txt
+rewriting-explanations.ipynb
+simplenlg-tests.ipynb
