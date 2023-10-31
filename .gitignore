@@ -11,7 +11,7 @@ data
 evaluation
 output.json
 plot-*.jpg
-.mac_env
+.env
 .DS_STORE
 pyproject.toml
 dist/
