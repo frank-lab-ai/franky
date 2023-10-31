@@ -27,7 +27,7 @@ def execute_query(
         context: str | dict = "",
         plot: bool = False,
         return_type: str = "object"
-    ) -> str | dict:
+    ) -> str | dict | None:
     """Command line interface to Frank for a single query.
     
     Parameters
@@ -44,7 +44,7 @@ def execute_query(
     
     Returns
     -------
-    answer: str | dict
+    answer: str | dict | None
         Answer returned by Frank in format specified by return_type.
     """
 
@@ -53,7 +53,6 @@ def execute_query(
 
     session_id = uuid.uuid4().hex
     interactive = False
-    answer = None
     if query:
         query_json = None
     else:
@@ -84,7 +83,6 @@ def execute_query(
         launch.start(alist, session_id, inference_graphs)
 
         if session_id in inference_graphs:
-            answer = inference_graphs[session_id]['answer']['answer']
             if plot:
                 graph = inference_graphs[session_id]['graph']
                 graph.plot_plotly(query)
@@ -96,9 +94,7 @@ def execute_query(
     if return_type == "object":
         return inference_graphs[session_id]
     if return_type == "answer":
-        return answer
-
-    return None
+        return inference_graphs[session_id]['answer']['answer']
 
 
 def batch(
@@ -202,7 +198,7 @@ def main(
         save: bool = False,
         return_type: str = "object",
         suppress_stdout: bool = False,
-    ) -> dict:
+    ) -> str | dict | None:
     """Command line interface to Frank for a single query. Includes nice formatting of output, and
     saving of query information.
      
@@ -223,7 +219,7 @@ def main(
 
     Returns
     -------
-    output: str | dict
+    output: str | dict | None
         Query output in for specified by return_type.
     """
 
@@ -240,7 +236,7 @@ def main(
     else:
         output_object = execute_query(query, context, plot, return_type=return_type)
 
-    if save:
+    if save and isinstance(output_object, dict):
         save_object(output_object)
 
     return output_object
@@ -265,6 +261,8 @@ if __name__ == '__main__':
         default=False, help="If True, plots the inference graph")
     argparser.add_argument("-x", "--suppress-stdout", type=bool,
         default=False, help="If True, suppresses stdout")
+    argparser.add_argument("-r", "--return-type", type=str,
+        default="object", help="If 'object', returns the full graph object, if 'answer', returns the answer itself")
 
     args = argparser.parse_args()
     if args.file and args.query:
@@ -275,5 +273,6 @@ if __name__ == '__main__':
     if args.file:
         batch(args.file, args.output)
     else:
-        output = main(' '.join(args.query), args.context, args.plot, args.save_output, return_type='answer', suppress_stdout=args.suppress_stdout)
+        output = main(' '.join(args.query), args.context, args.plot, args.save_output,
+            return_type=args.return_type, suppress_stdout=args.suppress_stdout)
         print(output)
