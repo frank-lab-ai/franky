@@ -174,6 +174,7 @@ def format_output(
 
 def save_object(
         query_object: dict,
+        path: str = "logs",
     ) -> None:
     """Save the inference graph object to ./logs/{timestamp}.pkl
     
@@ -181,10 +182,12 @@ def save_object(
     ----------
     query_object: dict
         The output of Frank's inference process in object form (inference_graphs[session_id])
+    path: str
+        Path to save the object to, default is ./logs
     """
 
     timestamp = datetime.datetime.now().isoformat()
-    output_dir = Path('logs')
+    output_dir = Path(path)
     if not output_dir.exists():
         output_dir.mkdir()
     with open(output_dir / f"{timestamp}.pkl", 'wb') as outfile:
