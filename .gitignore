@@ -11,12 +11,8 @@ data
 evaluation
 output.json
 plot-*.jpg
-.mac-env
+.mac_env
 .DS_STORE
-.mac-env_3.10
-api_keys.py
-data-text-explanations.ipynb
-requirements_3.10.txt
-rewriting-explanations.ipynb
-simplenlg-tests.ipynb
-tests.ipynb
+pyproject.toml
+dist/
+frank.egg-info/
