@@ -1,45 +1,56 @@
 '''
 File: parser.py
 Description: Template-based parser for NL queries.
-
-
 '''
 
+import argparse
 import datetime
-
-import json
-import hashlib
-import hmac
-from urllib.parse import urlencode
 import re
-import uuid
-import math
-import numbers
 from collections import deque
-import spacy
-import itertools
-import time
 
+import spacy
 
 class Parser:
-    nlp_lib = None
-
-    def __init__(self):
-        if Parser.nlp_lib == None:
-            Parser.nlp_lib = spacy.load('en_core_web_sm')
+    """Parser class for NL queries."""
+    def __init__(
+            self,
+            nlp_lib: str | None = None,
+        ) -> None:
+        """Initialize the parser and load NLP library."""
+        self.nlp_lib = nlp_lib
+        if self.nlp_lib is None:
+            self.nlp_lib = spacy.load('en_core_web_sm')
 
     # Find a template
-    def find_templates(self, querystring):
+    def find_templates(
+            self,
+            querystring: str,
+        ) -> dict:
         """ Match the query string to query templates
 
-        Args: querystring
+        Parameters
+        ----------
+        querystring : str
+            The natural language query to be matched.
         """
         # remove multiple spaces from querystring
         querystring = ' '.join(querystring.split())
         return self.getNextSuggestion(querystring)
 
     def getNextSuggestion(self, querystring):
-        doc = Parser.nlp_lib(querystring)
+        """Attempt to match the query string to a template.
+        
+        Parameters
+        ----------
+        querystring : str
+            The natural language query to be matched.
+        
+        Returns
+        -------
+        returnObj: dict
+            The dictionary containing the query string, template and alist.
+        """
+        doc = self.nlp_lib(querystring)
         tkns = []
         for token in doc:
             print(token.text, token.lemma_, token.pos_, token.tag_, token.dep_)
@@ -83,7 +94,7 @@ class Parser:
             if token.pos_ != 'NOUN':
                 all_nns = False
                 break
-        
+
         if all_nns:
             for token in doc:
                 if token.text in stop_words:
@@ -117,23 +128,23 @@ class Parser:
                             mapped_terms.append([pos_mapper[token_tag], ent.text.replace('the', '').strip(), token_tag])
                         break
 
-                if in_ent == False:
+                if not in_ent:
                     skip_start_char = -1
                     skip_end_char = -1
                     if token.tag_ == "JJ" and token.text not in operation_triggers:
                         compound_PROPCLASS = token.text_with_ws
                         continue
 
-                if in_ent == False:
+                if not in_ent:
                     skip_start_char = -1
                     skip_end_char = -1
                     token_tag = token.pos_ + ':' + token.tag_
-                    if token.dep_ == 'compound' and in_compound == False:
+                    if token.dep_ == 'compound' and not in_compound:
                         in_compound = True
                         compound_NN = compound_PROPCLASS + token.text
                         compound_PROPCLASS = ''
 
-                    elif token.dep_ != 'compound' and in_compound == True:
+                    elif token.dep_ != 'compound' and in_compound:
                         compound_NN += ' ' + token.text
                         if token_tag in pos_mapper:
                             mapped_terms.append([pos_mapper[token_tag], compound_NN.strip(), token_tag])
@@ -154,12 +165,12 @@ class Parser:
         returnObj = {'question': querystring,
                      'template': [x[0] for x in mapped_terms], 
                      'alist': query_frame}
-        return (returnObj)
+        return returnObj
 
     def GenerateQueryFromRegex(self, tokens):
         tokens_with_idx = ''
-        for idx in range(len(tokens)):
-            tokens_with_idx += tokens[idx][0] + '-' + str(idx) + ' '
+        for i, t in enumerate(tokens):
+            tokens_with_idx += t[0] + '-' + str(i) + ' '
         tokens_with_idx = tokens_with_idx.strip()
 
         alist = {}
@@ -232,56 +243,56 @@ class Parser:
         curr_year = str(datetime.datetime.now().year)
         regex_patterns = [
             # op X of Y in T
-            (10, '^(?P<op>operation-\d*) (?P<prop>propclass-\d*) (of)-\d* (?P<entity>entity-\d*) (in|at)-\d* (?P<time>datetime-\d*)$'),
+            (10, r'^(?P<op>operation-\d*) (?P<prop>propclass-\d*) (of)-\d* (?P<entity>entity-\d*) (in|at)-\d* (?P<time>datetime-\d*)$'),
             # X of Y in T
-            (15, '^(?P<prop>propclass-\d*) (of)-\d* (?P<entity>entity-\d*) (in|at)-\d* (?P<time>datetime-\d*)$'),
+            (15, r'^(?P<prop>propclass-\d*) (of)-\d* (?P<entity>entity-\d*) (in|at)-\d* (?P<time>datetime-\d*)$'),
             # op X of  Y>
-            (20, '^(?P<op>operation-\d*) (?P<prop>propclass-\d*) (of)-\d* (?P<entity>entity-\d*)$'),
-            (25, '^(?P<prop>propclass-\d*) (of)-\d* (?P<entity>entity-\d*)$'),  # X of Y>
+            (20, r'^(?P<op>operation-\d*) (?P<prop>propclass-\d*) (of)-\d* (?P<entity>entity-\d*)$'),
+            (25, r'^(?P<prop>propclass-\d*) (of)-\d* (?P<entity>entity-\d*)$'),  # X of Y>
 
 
             # op X of nested Y in T
-            (30, '^(?P<op>operation-\d*) (?P<prop>propclass-\d*) (of)-\d* (?P<entity>.*) (in|at)-\d* (?P<time>datetime-\d*)$'),
+            (30, r'^(?P<op>operation-\d*) (?P<prop>propclass-\d*) (of)-\d* (?P<entity>.*) (in|at)-\d* (?P<time>datetime-\d*)$'),
             # prop of (nested entity in T )
-            (32, '^(?P<prop>propclass-\d*) (of)-\d* (?P<entity>(propclass-\d* (in|at)-\d*.*) (in|at)-\d* (datetime-\d*))$'),
+            (32, r'^(?P<prop>propclass-\d*) (of)-\d* (?P<entity>(propclass-\d* (in|at)-\d*.*) (in|at)-\d* (datetime-\d*))$'),
             # X of <nested Y in T
-            (35, '^(?P<prop>propclass-\d*) (of)-\d* (?P<entity>.*) (in|at)-\d* (?P<time>datetime-\d*)$'),
+            (35, r'^(?P<prop>propclass-\d*) (of)-\d* (?P<entity>.*) (in|at)-\d* (?P<time>datetime-\d*)$'),
             # op X of <nested Y>
-            (40, '^(?P<op>operation-\d*) (?P<prop>propclass-\d*) (of)-\d* (?P<entity>.*)$'),
+            (40, r'^(?P<op>operation-\d*) (?P<prop>propclass-\d*) (of)-\d* (?P<entity>.*)$'),
             # X of <nested Y>
-            (45, '^(?P<prop>propclass-\d*) (of)-\d* (?P<entity>.*)$'),
+            (45, r'^(?P<prop>propclass-\d*) (of)-\d* (?P<entity>.*)$'),
 
             # op X in T of <nested Y
-            (50, '^(?P<op>operation-\d*) (?P<prop>propclass-\d*) (in|at)-\d* (?P<time>datetime-\d*) (of)-\d* (?P<entity>.*)$'),
+            (50, r'^(?P<op>operation-\d*) (?P<prop>propclass-\d*) (in|at)-\d* (?P<time>datetime-\d*) (of)-\d* (?P<entity>.*)$'),
             # X in T of Y
-            (55, '^(?P<prop>propclass-\d*) (in|at)-\d* (?P<time>datetime-\d*) (of)-\d* (?P<entity>.*)$'),
+            (55, r'^(?P<prop>propclass-\d*) (in|at)-\d* (?P<time>datetime-\d*) (of)-\d* (?P<entity>.*)$'),
 
             # country in Africa
-            (60, '^(?P<class>propclass-\d*) (in|at)-\d* (?P<loc>entity-\d*)$'),
-            (65, '^(?P<class>propclass-\d*)$'),  # country ...
-            (70, '^(?P<entity>.*) (with|verb)-\d* (?P<op>operation-\d*) (?P<prop>propclass-\d*) (in|at)-\d* (?P<time>datetime-\d*)$'),
-            (75, '^(?P<entity>.*) (with|verb)-\d* (?P<op>operation-\d*) (?P<prop>propclass-\d*)$'),
+            (60, r'^(?P<class>propclass-\d*) (in|at)-\d* (?P<loc>entity-\d*)$'),
+            (65, r'^(?P<class>propclass-\d*)$'),  # country ...
+            (70, r'^(?P<entity>.*) (with|verb)-\d* (?P<op>operation-\d*) (?P<prop>propclass-\d*) (in|at)-\d* (?P<time>datetime-\d*)$'),
+            (75, r'^(?P<entity>.*) (with|verb)-\d* (?P<op>operation-\d*) (?P<prop>propclass-\d*)$'),
 
             # comparisons
             # X prop of Y   e.g. is Paris the capital of France.
-            # (80, '^(?P<entity>-\d*) (?P<prop>propclass-\d*) (of)-\d* (?P<entity>-\d*)$'),
+            # (80, r'^(?P<entity>-\d*) (?P<prop>propclass-\d*) (of)-\d* (?P<entity>-\d*)$'),
 
             # verb propclass
             # sang Infinite Things
-            (90, '^(?P<prop>verb-\d*) (of|in|for)-\d* (?P<entity>propclass-\d*)$'),
+            (90, r'^(?P<prop>verb-\d*) (of|in|for)-\d* (?P<entity>propclass-\d*)$'),
 
             # sang <X of/in Y> : nested object
-            (95, '^(?P<prop>verb-\d*) (?P<entity>.*)$'),
-            # (95, '^(?P<verb>verb-\d*) (?P<class>propclass-\d*) (of|for|in)-\d* (?P<class>propclass-\d*)$'),
+            (95, r'^(?P<prop>verb-\d*) (?P<entity>.*)$'),
+            # (95, r'^(?P<verb>verb-\d*) (?P<class>propclass-\d*) (of|for|in)-\d* (?P<class>propclass-\d*)$'),
             
            
-            (100, '^(?P<when>when-\d*) (?P<subj>entity-\d*) (?P<prop>verb-\d*) (?P<obj>entity-\d*)$'),
-            (105, '^(?P<when>when-\d*) (?P<subj>entity-\d*) (?P<prop>verb-\d*) (?P<entity>.*)$'), 
+            (100, r'^(?P<when>when-\d*) (?P<subj>entity-\d*) (?P<prop>verb-\d*) (?P<obj>entity-\d*)$'),
+            (105, r'^(?P<when>when-\d*) (?P<subj>entity-\d*) (?P<prop>verb-\d*) (?P<entity>.*)$'), 
             
             # France population
-            (110, '^(?P<entity>.*) (?P<prop>propclass-\d*)$'),
+            (110, r'^(?P<entity>.*) (?P<prop>propclass-\d*)$'),
             # Friends theme_song
-            (115, '^(?P<entity>propclass-\d*) (?P<prop>propclass-\d*)$'),
+            (115, r'^(?P<entity>propclass-\d*) (?P<prop>propclass-\d*)$'),
 
         ]
 
@@ -381,3 +392,15 @@ class Parser:
     def Sorting(self, lst):
         lst.sort(key=len)
         return lst
+
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-q', '--query', type=str, required=False)
+    args = parser.parse_args()
+    if args.query is None:
+        query = input("Enter query to parse: ")
+    else:
+        query = args.query
+    parsed_query = Parser().getNextSuggestion(query)
+    print(parsed_query)
