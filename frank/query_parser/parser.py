@@ -160,11 +160,12 @@ class Parser:
             if x[0] == 'prep':
                 x[0] = x[1]
 
-        query_frame = self.GenerateQueryFromRegex(mapped_terms)
+        query_frame, pattern = self.GenerateQueryFromRegex(mapped_terms)
 
         returnObj = {'question': querystring,
                      'template': [x[0] for x in mapped_terms], 
-                     'alist': query_frame}
+                     'alist': query_frame,
+                     'pattern': pattern}
         return returnObj
 
     def GenerateQueryFromRegex(self, tokens):
@@ -183,6 +184,7 @@ class Parser:
 
         previous_pattern = pattern
         while queue:
+            print(f"Previous pattern: {previous_pattern}, queue: {queue}")
             qitem = queue.pop()
             curr_alist = qitem[0]
             k = qitem[1]
@@ -222,7 +224,7 @@ class Parser:
                     queue = self.scan_alist(item, queue)
 
         # print(alist)
-        return alist
+        return alist, pattern
 
     def scan_alist(self, alist, queue):
         if not alist:
@@ -353,6 +355,7 @@ class Parser:
                     if m is not None and s == '#':
                         #print("matched...")
                         matched_pattern = idx
+                        print(f"matched pattern {idx}")
                         curr_alist = alist_patterns[idx]
 
                         for group_name, matched_str in m.groupdict().items():
@@ -396,11 +399,11 @@ class Parser:
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-q', '--query', type=str, required=False)
+    parser.add_argument('-q', '--query', nargs='+', type=str, required=False)
     args = parser.parse_args()
     if args.query is None:
         query = input("Enter query to parse: ")
     else:
-        query = args.query
+        query = ' '.join(args.query)
     parsed_query = Parser().getNextSuggestion(query)
     print(parsed_query)
