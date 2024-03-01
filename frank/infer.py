@@ -349,7 +349,7 @@ class Infer:
                     ff.set(tt.PROPERTY,
                            self.reverse_property_refs[ff.get(tt.PROPERTY)])
 
-                alist.parent_decomposition = "Lookup"
+                alist.parent_decomposition = "lookup"
                 self.G.add_alist(alist)
                 self.G.link(alist, ff, alist.parent_decomposition)
 
