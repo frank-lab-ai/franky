@@ -19,3 +19,4 @@ frank.egg-info/
 setup.py
 __init__.py
 build
+.data

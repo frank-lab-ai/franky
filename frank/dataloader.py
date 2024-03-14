@@ -1,5 +1,7 @@
 import os
 import re
+from pathlib import Path
+
 import pandas as pd
 
 
@@ -18,8 +20,10 @@ def load_data(filename):
     pickle_file = filepath + '.pickle'
     if os.path.isfile(pickle_file) is False:
         if os.path.isfile(pickle_file) is False:
-            df = pd.read_csv(
-                f'https://franklab.s3-eu-west-1.amazonaws.com/datasets/{filename}.csv')
+            if Path('..', '.data', f'{filename}.csv').exists():
+                df = pd.read_csv(Path('..', '.data', f'{filename}.csv'))
+            else:
+                df = pd.read_csv(f'https://franklab.s3-eu-west-1.amazonaws.com/datasets/{filename}.csv')
             df.to_csv(filepath + '.csv')
         else:
             df = pd.read_csv(csv_file)
