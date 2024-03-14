@@ -6,6 +6,7 @@ Description: Interface to Wikidata
 '''
 
 from pymongo import MongoClient
+
 from frank import config
 
 

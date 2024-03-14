@@ -5,14 +5,15 @@ Description: Interface to the World Bank dataset.
 
 '''
 
-import requests
 import urllib.parse
+
+import requests
+
+import frank.dataloader
+from frank import config
 from frank.alist import Alist
 from frank.alist import Attributes as tt
-from frank.kb import rdf
-from frank.kb import mongo
-from frank import config
-import frank.dataloader
+from frank.kb import mongo, rdf
 
 indicators = {
     "population": "SP.POP.TOTL",

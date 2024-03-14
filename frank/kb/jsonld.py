@@ -1,20 +1,20 @@
-from typing import List, Any, Tuple, Optional
-from pyld import jsonld
-from bs4 import BeautifulSoup
 import json
 import logging
 from itertools import chain
+from typing import Any, List, Optional, Tuple
 
-from frank.config import config
-from frank.util.utils import listify, filter_out_falsy
+from bs4 import BeautifulSoup
+from pyld import jsonld
+
 from frank.alist import Alist
 from frank.alist import Attributes as tt
+from frank.config import config
 from frank.kb import KB
-from frank.kb.meta import Entity, Relationship
 from frank.kb.extensions.schemaorg import get_schema as get_schemaorg_schema
-from frank.kb.utils.requests import requests
+from frank.kb.meta import Entity, Relationship
 from frank.kb.utils.link_crawler import crawl_graph, crawl_soup
-
+from frank.kb.utils.requests import requests
+from frank.util.utils import filter_out_falsy, listify
 
 # jsonld.set_document_loader(jsonld.requests_document_loader(headers={
 #     'Accept': 'application/ld+json, application/json',

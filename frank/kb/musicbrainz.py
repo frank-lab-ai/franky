@@ -5,12 +5,14 @@ Description: Basic wrapper for the MusicBrainz API.
 
 '''
 
-import requests
-from datetime import datetime
 import urllib.parse
+from datetime import datetime
+
+import requests
+
+from frank import config
 from frank.alist import Alist
 from frank.alist import Attributes as tt
-from frank import config
 
 #format : artist sang/recorded title in date
 

@@ -5,11 +5,13 @@ Description: Interface to the ConceptNet KB.
 
 '''
 
-import requests
 import urllib.parse
+
+import requests
+
+from frank import config
 from frank.alist import Alist
 from frank.alist import Attributes as tt
-from frank import config
 
 
 def search_properties(search_term):

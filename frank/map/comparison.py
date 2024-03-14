@@ -8,12 +8,13 @@ Description: Comparison decomposition of Alist
 # import _context
 from frank.alist import Alist as A
 from frank.alist import Attributes as tt
-from frank.alist import VarPrefix as vx
 from frank.alist import Branching as br
-from frank.alist import States as states
 from frank.alist import NodeTypes as nt
-from .map import Map
+from frank.alist import States as states
+from frank.alist import VarPrefix as vx
 from frank.graph import InferenceGraph
+
+from .map import Map
 
 
 class Comparison(Map):

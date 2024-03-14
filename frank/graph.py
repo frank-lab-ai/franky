@@ -9,8 +9,8 @@ import networkx as nx
 import plotly.graph_objects as go
 
 from frank.alist import Alist
-from frank.alist import States as st
 from frank.alist import NodeTypes as nt
+from frank.alist import States as st
 
 
 class InferenceGraph(nx.DiGraph):

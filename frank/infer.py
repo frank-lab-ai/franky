@@ -11,9 +11,9 @@ import threading
 import time
 
 import frank.cache.logger as clogger
+import frank.context
 import frank.map.map_wrapper
 import frank.processLog as plog
-from frank.processLog import pcolors as pcol
 import frank.reduce.comp
 import frank.reduce.eq
 import frank.reduce.gpregress
@@ -31,20 +31,20 @@ import frank.reduce.regress
 import frank.reduce.sum
 import frank.reduce.value
 import frank.reduce.values
-from frank.util import utils
+from frank import config, processLog
 from frank.alist import Alist
 from frank.alist import Attributes as tt
 from frank.alist import Branching as br
+from frank.alist import Contexts as ctx
 from frank.alist import NodeTypes as nt
 from frank.alist import States as states
-from frank import config
-from frank.kb import rdf, wikidata, worldbank, musicbrainz, jsonld
-from .explain import Explanation
-from frank import processLog
-from frank.uncertainty.sourcePrior import SourcePrior as sourcePrior
-import frank.context
-from frank.alist import Contexts as ctx
 from frank.graph import InferenceGraph
+from frank.kb import jsonld, musicbrainz, rdf, wikidata, worldbank
+from frank.processLog import pcolors as pcol
+from frank.uncertainty.sourcePrior import SourcePrior as sourcePrior
+from frank.util import utils
+
+from .explain import Explanation
 
 
 class Infer:

@@ -4,22 +4,22 @@ Description:
 
 
 '''
+import json
+import threading
 import time
 import timeit
 import uuid
-import json
-import threading
-from frank.infer import Infer
 
+import frank.context
+from frank import config
 from frank.alist import Alist
 from frank.alist import Attributes as tt
-from frank.alist import States as states
 from frank.alist import Branching as branching
-from frank import config
-from frank.util import utils
+from frank.alist import States as states
 from frank.graph import InferenceGraph
+from frank.infer import Infer
 from frank.processLog import pcolors as pcol
-import frank.context
+from frank.util import utils
 
 
 class Launcher():

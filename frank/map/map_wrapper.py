@@ -5,10 +5,11 @@ Description: A wrapper for various decomposition operations.
 
 '''
 
-from frank.map.geospatial import Geospatial
-from frank.map.temporal import Temporal
-from frank.map.normalize import Normalize
 from frank.map.comparison import Comparison
+from frank.map.geospatial import Geospatial
+from frank.map.normalize import Normalize
+from frank.map.temporal import Temporal
+
 # from frank.map.isa import IsA
 
 

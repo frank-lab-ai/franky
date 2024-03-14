@@ -6,15 +6,16 @@ Description: Operation to propagate child alists to parents
 '''
 
 from typing import List
+
 from frank.alist import Alist
 from frank.alist import Attributes as tt
-from frank.alist import VarPrefix as vx
 from frank.alist import Branching as br
-from frank.alist import States as states
 from frank.alist import NodeTypes as nt
-from frank.util import utils
-from frank.uncertainty.aggregateUncertainty import estimate_uncertainty
+from frank.alist import States as states
+from frank.alist import VarPrefix as vx
 from frank.graph import InferenceGraph
+from frank.uncertainty.aggregateUncertainty import estimate_uncertainty
+from frank.util import utils
 
 
 def projections(parent: Alist, alists_to_propagate):

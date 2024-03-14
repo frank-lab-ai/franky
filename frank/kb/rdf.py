@@ -5,11 +5,13 @@ Description: Interface to various SPARQL-based endpoints.
 
 '''
 
-import requests
 import urllib.parse
+
+import requests
+
+from frank import config
 from frank.alist import Alist
 from frank.alist import Attributes as tt
-from frank import config
 
 
 def find_sub_location(entity: str):

@@ -1,9 +1,9 @@
 from datetime import datetime
+
 from frank.alist import Alist
 from frank.alist import Attributes as tt
 from frank.alist import Contexts as ctx
-from frank.kb import wikidata
-from frank.kb import worldbank
+from frank.kb import wikidata, worldbank
 
 
 def get_user_context(alist, key):

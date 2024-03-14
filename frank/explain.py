@@ -5,12 +5,12 @@ Description: Generate explanations for alists and operations.
 
 '''
 
+from frank import config
 from frank.alist import Alist
 from frank.alist import Attributes as tt
-from frank.alist import States as states
 from frank.alist import Branching as branching
 from frank.alist import NodeTypes as nt
-from frank import config
+from frank.alist import States as states
 from frank.graph import InferenceGraph
 
 

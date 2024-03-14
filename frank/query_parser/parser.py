@@ -10,6 +10,7 @@ from collections import deque
 
 import spacy
 
+
 class Parser:
     """Parser class for NL queries."""
     def __init__(

@@ -5,13 +5,15 @@ Description: Manage prior uncertainty for knowledge sources.
 
 '''
 
+import math
 from datetime import datetime
+
 import numpy as np
 import pandas as pd
-import math
+
+import frank.dataloader
 from frank.config import config
 from frank.kb import mongo
-import frank.dataloader
 
 # client = MongoClient(host=config["mongo_host"], port=config["mongo_port"])
 client = mongo.getClient()

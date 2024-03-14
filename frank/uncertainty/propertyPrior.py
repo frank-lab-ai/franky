@@ -5,15 +5,17 @@ Description: Manage prior uncertainty for properties (or relations)
 
 '''
 
-from datetime import datetime
-import numpy as np
-import pandas as pd
 import math
 import statistics
-from frank.config import config
-import frank.uncertainty.sourcePrior as sourcePrior
-from frank.kb import mongo
+from datetime import datetime
+
+import numpy as np
+import pandas as pd
+
 import frank.dataloader
+import frank.uncertainty.sourcePrior as sourcePrior
+from frank.config import config
+from frank.kb import mongo
 
 # client = MongoClient(host=config["mongo_host"], port=config["mongo_port"])
 client = mongo.getClient()

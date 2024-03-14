@@ -5,18 +5,19 @@ Description: Interface to Wikidata
 
 '''
 
-import requests
 import difflib
 import urllib.parse
+from datetime import datetime
+
+import requests
 from pymongo import MongoClient
+
+import frank.dataloader
+import frank.util.utils
+from frank import config
 from frank.alist import Alist
 from frank.alist import Attributes as tt
-from frank import config
-from frank.kb import mongo
-from frank.kb import conceptnet
-import frank.util.utils
-from datetime import datetime
-import frank.dataloader
+from frank.kb import conceptnet, mongo
 
 
 def search_properties(search_term):

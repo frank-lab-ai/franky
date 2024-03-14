@@ -5,14 +5,16 @@ Description: REST-based API for FRANK
 
 '''
 
-from flask import Flask, request, Response
 import json
-from frank.launcher import Launcher
-from frank.config import config
+
+from flask import Flask, Response, request
+from flask_cors import CORS
+
 import frank.explain
 import frank.query_parser.parser
+from frank.config import config
 from frank.graph import InferenceGraph
-from flask_cors import CORS
+from frank.launcher import Launcher
 
 app = Flask(__name__)
 CORS(app)

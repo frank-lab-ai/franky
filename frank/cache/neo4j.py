@@ -6,11 +6,12 @@ Description:
 '''
 
 from neo4j import GraphDatabase
+
+from frank import config
 from frank.alist import Alist
 from frank.alist import Attributes as tt
-from frank.alist import States as states
 from frank.alist import Branching as branching
-from frank import config
+from frank.alist import States as states
 
 
 def get_driver():

@@ -5,6 +5,7 @@ Description: Estimate uncertainty in a reduce operation given a list of alists t
 
 '''
 import math
+
 from frank.alist import Alist
 from frank.alist import Attributes as tt
 from frank.util import utils

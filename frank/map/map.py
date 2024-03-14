@@ -5,6 +5,7 @@ Description: Base class for map operations.
 '''
 import abc
 from abc import ABC, abstractmethod
+
 # from frank.alist import Alist
 
 

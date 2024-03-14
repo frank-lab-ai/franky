@@ -5,17 +5,18 @@ Description: Normalization decomposition of A
 Copyright 2014 - 2020  Kobby K.A. Nuamah
 '''
 
+import frank.context
 # import _context
 from frank.alist import Alist as A
 from frank.alist import Attributes as tt
-from frank.alist import VarPrefix as vx
 from frank.alist import Branching as br
-from frank.alist import States as states
 from frank.alist import NodeTypes as nt
-from frank.kb import rdf
-from .map import Map
+from frank.alist import States as states
+from frank.alist import VarPrefix as vx
 from frank.graph import InferenceGraph
-import frank.context
+from frank.kb import rdf
+
+from .map import Map
 
 
 class Normalize(Map):

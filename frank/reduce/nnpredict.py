@@ -5,24 +5,26 @@ Description: A neural network-based regression operation
 
 '''
 
+import math
+from typing import List
+
+import matplotlib.pyplot as plt
 # imports
 import numpy as np
 import pandas as pd
-import math
-import matplotlib.pyplot as plt
 # import keras
 from sklearn.metrics import mean_absolute_error
-from typing import List
+
 from frank.alist import Alist
 from frank.alist import Attributes as tt
-from frank.alist import VarPrefix as vx
 from frank.alist import Branching as br
-from frank.alist import States as states
 from frank.alist import NodeTypes as nt
-from frank.util import utils
-from frank.uncertainty.aggregateUncertainty import estimate_uncertainty
-from frank.reduce import propagate
+from frank.alist import States as states
+from frank.alist import VarPrefix as vx
 from frank.graph import InferenceGraph
+from frank.reduce import propagate
+from frank.uncertainty.aggregateUncertainty import estimate_uncertainty
+from frank.util import utils
 
 np.random.seed(20)
 # params
